@@ -8,6 +8,10 @@ let generatedCode = '';
 
 // DOM elements and initialization
 document.addEventListener('DOMContentLoaded', function() {
+    // Hide sections initially
+    document.getElementById('generatedCodeSection').style.display = 'none';
+    document.getElementById('personasSection').style.display = 'none';
+
     // Initialize sliders with their display values
     document.getElementById('numPersonas').addEventListener('input', function() {
         document.getElementById('numPersonasValue').textContent = this.value;
@@ -24,10 +28,28 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('surveyTemperature').addEventListener('input', function() {
         document.getElementById('surveyTemperatureValue').textContent = this.value;
     });
-    
+
+    // Initialize model select dropdowns with options from template
+    const modelTemplate = document.getElementById('modelOptionsTemplate');
+    document.querySelectorAll('.model-select').forEach(select => {
+        select.innerHTML = modelTemplate.innerHTML;
+    });
+        
     // Button event listeners
-    document.getElementById('generateCodeBtn').addEventListener('click', generatePersonaCode);
-    document.getElementById('executeCodeBtn').addEventListener('click', executePersonaCode);
+    document.getElementById('generateCodeBtn').addEventListener('click', async function() {
+        await generatePersonaCode();
+        document.getElementById('generatedCodeSection').style.display = 'block';
+        // Scroll to generated code section
+        document.getElementById('generatedCodeSection').scrollIntoView({ behavior: 'smooth' });
+    });
+
+    document.getElementById('executeCodeBtn').addEventListener('click', async function() {
+        await executePersonaCode();
+        document.getElementById('personasSection').style.display = 'block';
+        // Scroll to personas section
+        document.getElementById('personasSection').scrollIntoView({ behavior: 'smooth' });
+    });
+    
     document.getElementById('downloadPersonasBtn').addEventListener('click', downloadPersonasCsv);
     document.getElementById('nextToSurveyBtn').addEventListener('click', () => {
         document.querySelector('#mainTabs button[data-bs-target="#survey"]').click();
@@ -59,10 +81,6 @@ async function generatePersonaCode() {
         const temperature = parseFloat(document.getElementById('personaTemperature').value);
         const model = document.getElementById('modelSelect').value;
         
-        if (!segmentPrompt || fieldsList.length === 0) {
-            showError("Please provide segment description and fields");
-            return;
-        }
         
         // Show progress indicator
         const progressBar = document.getElementById('generationProgress');
@@ -140,6 +158,11 @@ async function generatePersonaCode() {
         // Update progress
         progressBarInner.style.width = '100%';
         progressBarInner.textContent = 'Code generated';
+
+        // Hide the progress bar after a short delay (optional)
+        setTimeout(() => {
+            progressBar.style.display = 'none';
+        }, 1000); // hides after 1 second, adjust as needed
         
         // Enable execute button
         document.getElementById('executeCodeBtn').disabled = false;
@@ -155,7 +178,7 @@ async function generatePersonaCode() {
 function executePersonaCode() {
     try {
         // Show progress
-        const progressBar = document.getElementById('generationProgress');
+        const progressBar = document.getElementById('generationProgress1');
         progressBar.classList.remove('d-none');
         const progressBarInner = progressBar.querySelector('.progress-bar');
         progressBarInner.style.width = '50%';
@@ -191,6 +214,11 @@ function executePersonaCode() {
         // Update progress
         progressBarInner.style.width = '100%';
         progressBarInner.textContent = `${personas.length} personas generated`;
+
+        // Hide the progress bar after a short delay (optional)
+        setTimeout(() => {
+            progressBar.style.display = 'none';
+        }, 1000); // hides after 1 second, adjust as needed
         
         // Display personas in the table
         displayPersonas();
@@ -203,7 +231,7 @@ function executePersonaCode() {
     } catch (error) {
         console.error("Error executing code:", error);
         showError(`Error executing code: ${error.message}`);
-        const progressBar = document.getElementById('generationProgress');
+        const progressBar = document.getElementById('generationProgress1');
         progressBar.classList.add('d-none');
     }
 }
