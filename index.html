@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shell Synthetic Persona Survey</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.css">
+    <style>
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            background-color: #f8f9fa;
+        }
+        
+        .section-title {
+            color: #d90000;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+        
+        .chart-container {
+            margin-top: 20px;
+            height: 400px;
+        }
+        
+        #resultsTable {
+            font-size: 14px;
+        }
+        
+        .nav-tabs .nav-link.active {
+            background-color: #3a3a37;
+            color: #e4e4e4;
+            font-weight: bold;
+        }
+        
+        .tab-content {
+            padding: 20px;
+            border: 1px solid #dee2e6;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+        }
+        
+        .progress {
+            height: 25px;
+        }
+        
+        .filter-section {
+            background-color: #f0f0f0;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        #personaTable {
+            font-size: 13px;
+        }
+        
+        #generatedCode {
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid my-4">
+
+        <div class="row">
+            <div class="col-12 text-center mb-4">
+                <h1> Shell Synthetic Persona Survey Demo</h1>
+                <p class="text-muted">Generate synthetic personas, run surveys through LLMs, and analyze results</p>
+            </div>
+        </div>
+        
+        <ul class="nav nav-tabs" id="mainTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="generate-tab" data-bs-toggle="tab" data-bs-target="#generate" type="button" role="tab">1. Generate Personas</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="survey-tab" data-bs-toggle="tab" data-bs-target="#survey" type="button" role="tab">2. Run Survey</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="results-tab" data-bs-toggle="tab" data-bs-target="#results" type="button" role="tab">3. Results & Analysis</button>
+            </li>
+        </ul>
+        
+        <div class="tab-content" id="mainTabsContent">
+            <!-- STEP 1: Generate Personas -->
+            <div class="tab-pane fade show active" id="generate" role="tabpanel">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="section">
+                            <h3 class="section-title">Persona Profile Configuration</h3>
+                            <div class="mb-3">
+                                <label for="segmentPrompt" class="form-label">Segment Description</label>
+                                <textarea class="form-control" id="segmentPrompt" rows="10">Synthetic Segment – "Value-Seeking Commuters" (London)
+Segment Definition: Mid- to lower-income, urban and suburban drivers
+Regular use of Shell FuelSave Unleaded or Diesel
+High sensitivity to fuel prices
+Medium to low loyalty program participation
+Low awareness or usage of premium fuels (e.g., V-Power)
+Motivated by price, ease of access, and clear reward offers
+Tend to refuel 1–2 times a week during commute</textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label for="fieldsList" class="form-label">Fields (one per line)</label>
+                                <textarea class="form-control" id="fieldsList" rows="12">ID (e.g., C0001 to C1000)
+Borough (randomly sampled from London boroughs with high car ownership: e.g., Croydon, Ealing, Bromley, Enfield)
+Age Range (e.g., 25–34, 35–44, 45–54)
+Gender (M/F/Non-Binary)
+Vehicle Type (e.g., Petrol hatchback, Diesel van, Compact SUV)
+Fuel Type Used (Shell FuelSave Unleaded or Diesel)
+Refueling Frequency (per month)
+Shell Go+ Loyalty Tier (None, Bronze, Silver)
+Price Sensitivity (High/Medium)
+Awareness of Premium Fuel (Low/Medium)
+Likelihood to Try V-Power in Promo (scale 1–5)
+Preferred Offer Type (e.g., Discount per litre, Double points, Bundle with coffee)
+Preferred Channel (Mobile App, SMS, In-store signage)
+Commute Distance (in km, round trip)</textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label for="numPersonas" class="form-label">Number of Personas: <span id="numPersonasValue">30</span></label>
+                                <input type="range" class="form-range" id="numPersonas" min="10" max="1000" value="30">
+                            </div>
+                            <div class="mb-3">
+                                <label for="personaTemperature" class="form-label">Temperature: <span id="personaTemperatureValue">0.7</span></label>
+                                <input type="range" class="form-range" id="personaTemperature" min="0.1" max="1" step="0.1" value="0.7">
+                            </div>
+                            <div class="mb-3">
+                                <label for="modelSelect" class="form-label">Model</label>
+                                <select class="form-select" id="modelSelect">
+                                    <option value="openai/gpt-4.1-mini" selected>OpenAI GPT-4.1-mini</option>
+                                    <option value="openai/gpt-4.1-nano">OpenAI GPT-4.1-nano</option>
+                                    <option value="anthropic/claude-3.5-sonnet">Anthropic Claude 3.5 Sonnet</option>
+                                    <option value="anthropic/claude-3-haiku">Anthropic Claude 3.5 Haiku</option>
+                                    <option value="mistralai/mistral-large">Mistral Large</option>
+                                    <option value="meta-llama/llama-3-70b-instruct">Meta Llama 3 70B</option>
+                                    <option value="deepseek/deepseek-chat">DeepSeek V3</option>
+                                    <option value="google/gemini-2.0-flash-001">Gemini Flash 2.0</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="apiKeyInput" class="form-label">OpenRouter API Key</label>
+                                <input type="password" class="form-control" id="apiKeyInput" placeholder="Enter your OpenRouter API key">
+                            </div>
+                            <button id="generateCodeBtn" class="btn btn-primary">Generate Code</button>
+                            <button id="executeCodeBtn" class="btn btn-success ms-2" disabled>Execute Code</button>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="section">
+                            <h3 class="section-title">Generated Code</h3>
+                            <pre id="generatedCode" class="p-3 bg-light">// Code will appear here...</pre>
+                            
+                            <h3 class="section-title mt-4">Generated Personas <span id="personaCount" class="badge bg-secondary">0</span></h3>
+                            <div id="generationProgress" class="progress mb-3 d-none">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                            </div>
+                            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                                <table id="personaTable" class="table table-sm table-striped table-hover">
+                                    <thead class="table-dark sticky-top">
+                                        <tr id="personaTableHeader">
+                                            <th>Loading...</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="personaTableBody">
+                                        <tr>
+                                            <td>No personas generated yet</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="d-flex justify-content-between mt-3">
+                                <button id="downloadPersonasBtn" class="btn btn-success" disabled>Download Personas (CSV)</button>
+                                <button id="nextToSurveyBtn" class="btn btn-warning" disabled>Next: Set Up Survey</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- STEP 2: Run Survey -->
+            <div class="tab-pane fade" id="survey" role="tabpanel">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="section">
+                            <h3 class="section-title">Survey Configuration</h3>
+                            <div class="mb-3">
+                                <label for="surveyQuestions" class="form-label">Survey Questions (one per line, format: Question: Option 1, Option 2, etc.)</label>
+                                <textarea class="form-control" id="surveyQuestions" rows="10">How often do you visit Shell stations? Daily, 2-3 times a week, Once a week, Once every two weeks, Monthly, Less often
+How interested are you in Shell's premium V-Power fuel? Very interested, Somewhat interested, Neutral, Not very interested, Not at all interested
+What's the primary factor in choosing where to refuel? Price, Convenience/Location, Loyalty rewards, Fuel quality, Station amenities, Brand trust
+How likely are you to use the Shell app for payments? Very likely, Somewhat likely, Neutral, Somewhat unlikely, Very unlikely
+What type of rewards would motivate you most? Fuel discounts, Loyalty points, Free coffee/snacks, Car wash vouchers, Cashback offers</textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label for="surveyParticipants" class="form-label">Number of Survey Participants: <span id="surveyParticipantsValue">30</span></label>
+                                <input type="range" class="form-range" id="surveyParticipants" min="5" max="200" value="30">
+                            </div>
+                            <div class="mb-3">
+                                <label for="surveyTemperature" class="form-label">Temperature: <span id="surveyTemperatureValue">0.5</span></label>
+                                <input type="range" class="form-range" id="surveyTemperature" min="0.1" max="1" step="0.1" value="0.5">
+                            </div>
+                            <div class="mb-3">
+                                <label for="surveyModelSelect" class="form-label">Model</label>
+                                <select class="form-select" id="surveyModelSelect">
+                                    <option value="openai/gpt-4.1-mini" selected>OpenAI GPT-4.1-mini</option>
+                                    <option value="openai/gpt-4.1-nano">OpenAI GPT-4.1-nano</option>
+                                    <option value="anthropic/claude-3-5-sonnet">Anthropic Claude 3.5 Sonnet</option>
+                                    <option value="anthropic/claude-3-haiku">Anthropic Claude 3.5 Haiku</option>
+                                    <option value="mistral/mistral-large">Mistral Large</option>
+                                    <option value="meta/llama-3-70b">Meta Llama 3 70B</option>
+                                    <option value="deepseek/deepseek-v3">DeepSeek V3</option>
+                                    <option value="google/gemini-2.0-flash-001">Gemini Flash 2.0</option>
+                                </select>
+                            </div>
+                            <button id="runSurveyBtn" class="btn btn-primary" disabled>Run Survey</button>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="section">
+                            <h3 class="section-title">Survey Progress</h3>
+                            <div id="surveyProgress" class="progress mb-3 d-none">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                            </div>
+                            <div class="card mb-3">
+                                <div class="card-header bg-info text-white">
+                                    <h5 class="mb-0">JSON Schema</h5>
+                                </div>
+                                <div class="card-body">
+                                    <pre id="jsonSchemaDisplay" class="p-3 bg-light" style="max-height: 200px; overflow-y: auto;">No schema generated yet</pre>
+                                </div>
+                            </div>
+                            <div class="card">
+                                <div class="card-header bg-success text-white">
+                                    <h5 class="mb-0">Survey Results <span id="responseCount" class="badge bg-light text-dark">0</span></h5>
+                                </div>
+                                <div class="card-body">
+                                    <div id="surveyResultsPreview" style="max-height: 200px; overflow-y: auto;">
+                                        <p class="text-muted">Survey responses will appear here...</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-between mt-3">
+                                <button id="downloadSurveyBtn" class="btn btn-success" disabled>Download Survey Results (JSON)</button>
+                                <button id="nextToResultsBtn" class="btn btn-warning" disabled>Next: View Analysis</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- STEP 3: Results & Analysis -->
+            <div class="tab-pane fade" id="results" role="tabpanel">
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="filter-section">
+                            <h3 class="section-title">Filter Results</h3>
+                            <div class="row" id="filterControls">
+                                <div class="col-md-3 mb-2">
+                                    <p class="text-muted">Filters will be dynamically generated based on persona fields</p>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-end">
+                                <button id="resetFiltersBtn" class="btn btn-outline-secondary">Reset Filters</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="section">
+                            <h3 class="section-title">Survey Results Charts</h3>
+                            <div id="chartsContainer" class="row">
+                                <p class="text-muted">Charts will appear here once survey results are available</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-12">
+                        <div class="section">
+                            <h3 class="section-title">Results Table</h3>
+                            <div class="table-responsive">
+                                <table id="resultsTable" class="table table-sm table-striped table-hover">
+                                    <thead class="table-dark">
+                                        <tr id="resultsTableHeader">
+                                            <th>No data available</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="resultsTableBody">
+                                        <tr>
+                                            <td>Run the survey to see results</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <button id="downloadResultsBtn" class="btn btn-success mt-3" disabled>Download Complete Results (CSV)</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for displaying errors -->
+    <div class="modal fade" id="errorModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">Error</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="errorModalBody">
+                    An error occurred.
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
