@@ -8,6 +8,31 @@ let generatedCode = '';
 
 // DOM elements and initialization
 document.addEventListener('DOMContentLoaded', function() {
+    const segmentSelect = document.getElementById('segmentSelect');
+    const segmentPrompt = document.getElementById('segmentPrompt');
+    const fieldsList = document.getElementById('fieldsList');
+
+    let segmentData = {};
+
+    // Load JSON file
+    fetch('segments.json')
+        .then(response => response.json())
+        .then(data => {
+            segmentData = data;
+
+            // Populate default
+            const selectedSegment = segmentData[segmentSelect.value];
+            segmentPrompt.value = selectedSegment.description;
+            fieldsList.value = selectedSegment.fields;
+
+            // Handle segment changes
+            segmentSelect.addEventListener('change', () => {
+                const selectedSegment = segmentData[segmentSelect.value];
+                segmentPrompt.value = selectedSegment.description;
+                fieldsList.value = selectedSegment.fields;
+            });
+        })
+
     // Hide sections initially
     document.getElementById('generatedCodeSection').style.display = 'none';
     document.getElementById('personasSection').style.display = 'none';
@@ -466,7 +491,13 @@ async function runSurvey() {
             // Update progress
             const progress = Math.round(((i + 1) / participants.length) * 100);
             progressBarInner.style.width = `${progress}%`;
-            progressBarInner.textContent = `Processing ${i + 1} of ${participants.length} (${progress}%)`;
+            progressBarInner.textContent = `Processed ${i + 1} of ${participants.length} (${progress}%)`;
+
+            if(i==participants.length-1){
+                setTimeout(() => {
+                        progressBar.style.display = 'none';
+                }, 1000); // hides after 1 second, adjust as needed
+            }
             
             // Create a system prompt describing the persona
             const personaDescription = Object.entries(persona)
@@ -769,7 +800,7 @@ function generateFilters() {
         
         // Create filter control
         const filterCol = document.createElement('div');
-        filterCol.className = 'col-md-3 mb-3';
+        filterCol.className = 'mb-3';
         
         const filterLabel = document.createElement('label');
         filterLabel.className = 'form-label';

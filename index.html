@@ -70,37 +70,23 @@
                 <div class="row">
                     <div class="col-12">
                         <div class="card shadow-sm mb-3">
-                            <div class="card-header bg-primary text-white">
+                            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                                 <h3 class="fs-6 mb-0"><i class="bi bi-gear-fill me-2"></i>Persona Profile Configuration</h3>
+                                <select class="form-select form-select-sm ms-2" id="segmentSelect" style="width: auto;">
+                                    <option value="segment1">Value Seeking Commuters</option>
+                                    <option value="segment2">Brand-Loyal Motorists</option>
+                                    <option value="segment3">Independent Tradespeople</option>
+                                    <option value="segment4">DIY Car Enthusiasts</option>
+                                </select>
                             </div>
                             <div class="card-body bg-body-tertiary">
                                 <div class="mb-2">
                                     <label for="segmentPrompt" class="form-label fw-semibold small">Segment Description</label>
-                                    <textarea class="form-control" id="segmentPrompt" rows="5">Synthetic Segment – "Value-Seeking Commuters" (London)
-Segment Definition: Mid- to lower-income, urban and suburban drivers
-Regular use of Shell FuelSave Unleaded or Diesel
-High sensitivity to fuel prices
-Medium to low loyalty program participation
-Low awareness or usage of premium fuels (e.g., V-Power)
-Motivated by price, ease of access, and clear reward offers
-Tend to refuel 1–2 times a week during commute</textarea>
+                                    <textarea class="form-control" id="segmentPrompt" rows="5"></textarea>
                                 </div>
                                 <div class="mb-2">
                                     <label for="fieldsList" class="form-label fw-semibold small">Fields (one per line)</label>
-                                    <textarea class="form-control" id="fieldsList" rows="6">ID (e.g., C0001 to C1000)
-Borough (randomly sampled from London boroughs with high car ownership: e.g., Croydon, Ealing, Bromley, Enfield)
-Age Range (e.g., 25–34, 35–44, 45–54)
-Gender (M/F/Non-Binary)
-Vehicle Type (e.g., Petrol hatchback, Diesel van, Compact SUV)
-Fuel Type Used (Shell FuelSave Unleaded or Diesel)
-Refueling Frequency (per month)
-Shell Go+ Loyalty Tier (None, Bronze, Silver)
-Price Sensitivity (High/Medium)
-Awareness of Premium Fuel (Low/Medium)
-Likelihood to Try V-Power in Promo (scale 1–5)
-Preferred Offer Type (e.g., Discount per litre, Double points, Bundle with coffee)
-Preferred Channel (Mobile App, SMS, In-store signage)
-Commute Distance (in km, round trip)</textarea>
+                                    <textarea class="form-control" id="fieldsList" rows="6"></textarea>
                                 </div>
                                 
                                 <div class="row mb-2">
@@ -206,11 +192,14 @@ Commute Distance (in km, round trip)</textarea>
                             <div class="card-body bg-body-tertiary">
                                 <div class="mb-2">
                                     <label for="surveyQuestions" class="form-label fw-semibold small">Survey Questions (one per line, format: Question: Option 1, Option 2, etc.)</label>
-                                    <textarea class="form-control" id="surveyQuestions" rows="6">How often do you visit Shell stations? Daily, 2-3 times a week, Once a week, Once every two weeks, Monthly, Less often
-How interested are you in Shell's premium V-Power fuel? Very interested, Somewhat interested, Neutral, Not very interested, Not at all interested
-What's the primary factor in choosing where to refuel? Price, Convenience/Location, Loyalty rewards, Fuel quality, Station amenities, Brand trust
-How likely are you to use the Shell app for payments? Very likely, Somewhat likely, Neutral, Somewhat unlikely, Very unlikely
-What type of rewards would motivate you most? Fuel discounts, Loyalty points, Free coffee/snacks, Car wash vouchers, Cashback offers</textarea>
+                                    <textarea class="form-control" id="surveyQuestions" rows="6">When choosing a fuel station, what matters most to you? (Price / Brand / Location / Loyalty Points)
+Are you familiar with Shell’s premium fuel (V-Power) and its benefits for engine performance?
+Have you ever purchased engine oil or lubricants yourself (e.g., Shell Helix)?
+Would you be willing to try Shell V-Power if it came with a limited-time discount or bonus offer?
+Do you prefer to receive fuel or service offers through: (App / SMS / Email / In-store Signage)
+How important is vehicle uptime or smooth engine performance to your daily routine? (1–5 scale)
+
+</textarea>
                                 </div>
                                 
                                 <div class="row mb-2">
