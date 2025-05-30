@@ -682,7 +682,7 @@ function renderCharts() {
         
         // Create a column in the charts container
         const chartCol = document.createElement('div');
-        chartCol.className = 'col-md-6 mb-4';
+        chartCol.className = 'mb-4';
         
         // Create a card for the chart
         const chartCard = document.createElement('div');
