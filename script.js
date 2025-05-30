@@ -74,21 +74,25 @@ document.addEventListener('DOMContentLoaded', function() {
         // Scroll to personas section
         document.getElementById('personasSection').scrollIntoView({ behavior: 'smooth' });
     });
-    
-    document.getElementById('downloadPersonasBtn').addEventListener('click', downloadPersonasCsv);
+
+    document.getElementById('downloadPersonasBtn').addEventListener('click', () => {
+    downloadCsv(personas, 'shell_synthetic_personas.csv', "No personas to download");});
     document.getElementById('nextToSurveyBtn').addEventListener('click', () => {
         document.querySelector('#mainTabs button[data-bs-target="#survey"]').click();
     });
     
     document.getElementById('runSurveyBtn').addEventListener('click', runSurvey);
     document.getElementById('downloadSurveyBtn').addEventListener('click', downloadSurveyJson);
+    document.getElementById('downloadSurveyCsvBtn').addEventListener('click', () => {
+    downloadCsv(surveyResults, 'shell_survey_results.csv', "No survey results to download");});
     document.getElementById('nextToResultsBtn').addEventListener('click', () => {
         document.querySelector('#mainTabs button[data-bs-target="#results"]').click();
         renderCharts();
     });
     
     document.getElementById('resetFiltersBtn').addEventListener('click', resetFilters);
-    document.getElementById('downloadResultsBtn').addEventListener('click', downloadCompleteResults);
+    document.getElementById('downloadResultsBtn').addEventListener('click', () => {
+    downloadCsv(surveyResults, 'shell_complete_survey_results.csv', "No results to download");});
 });
 
 // STEP 1: Generate Persona Code
@@ -300,19 +304,23 @@ function displayPersonas() {
     });
 }
 
-function downloadPersonasCsv() {
-    if (personas.length === 0) {
-        showError("No personas to download");
+function downloadCsv(data, filename, errorMessage) {
+    if (!data || data.length === 0) {
+        showError(errorMessage || "No data to download");
         return;
     }
     
-    const fields = Object.keys(personas[0]);
+    const fields = Object.keys(data[0]);
     const csvContent = [
         fields.join(','), // Header row
-        ...personas.map(persona => 
+        ...data.map(item => 
             fields.map(field => {
                 // Properly escape CSV values
-                let value = persona[field] || '';
+                let value = item[field] || '';
+                // Convert to string if it's not already
+                if (typeof value !== 'string') {
+                    value = String(value);
+                }
                 // If value contains commas, quotes, or newlines, wrap in quotes
                 if (/[",\n\r]/.test(value)) {
                     value = `"${value.replace(/"/g, '""')}"`;
@@ -327,7 +335,7 @@ function downloadPersonasCsv() {
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', 'shell_synthetic_personas.csv');
+    link.setAttribute('download', filename);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -504,7 +512,12 @@ async function runSurvey() {
                 .map(([key, value]) => `${key}: ${value}`)
                 .join('\n');
             
-            const systemPrompt = `You are a survey participant with the following profile:\n${personaDescription}\n\nAnswer the following questions based on this profile. Your answers should be consistent with your profile characteristics.`;
+            const systemPrompt = `You are a survey participant with the following profile:\n${personaDescription}\n\n
+Your task is to answer survey questions authentically as this specific person would respond.
+IMPORTANT: Your profile should strongly influence your choices. Different personas should have different preferences.
+- People with different backgrounds and values will naturally choose different options
+- Don't pick what you think is objectively "best" - pick what YOUR CHARACTER would choose
+- Be true to the psychological traits, values, and background of your persona`;
             
             // Create questions prompt
             const questionsPrompt = surveyQuestions.map((q, idx) => 
@@ -566,26 +579,18 @@ async function runSurvey() {
             // Update response count
             document.getElementById('responseCount').textContent = surveyResults.length.toString();
             
-            // Add to preview (showing only the first 5 results in detail)
             const resultsPreview = document.getElementById('surveyResultsPreview');
-            if (i < 5) {
-                const resultDiv = document.createElement('div');
-                resultDiv.className = 'card mb-2';
-                resultDiv.innerHTML = `
-                    <div class="card-header bg-light">
-                        Participant ${i + 1}
-                    </div>
-                    <div class="card-body">
-                        <pre style="font-size: 12px;">${JSON.stringify(answerData, null, 2)}</pre>
-                    </div>
-                `;
-                resultsPreview.appendChild(resultDiv);
-            } else if (i === 5) {
-                const moreDiv = document.createElement('div');
-                moreDiv.className = 'alert alert-info';
-                moreDiv.textContent = `... and ${numParticipants - 5} more participants`;
-                resultsPreview.appendChild(moreDiv);
-            }
+            const resultDiv = document.createElement('div');
+            resultDiv.className = 'card mb-2';
+            resultDiv.innerHTML = `
+                <div class="card-header bg-light">
+                    Participant ${i + 1}
+                </div>
+                <div class="card-body">
+                    <pre style="font-size: 12px;">${JSON.stringify(answerData, null, 2)}</pre>
+                </div>
+            `;
+            resultsPreview.appendChild(resultDiv);
         }
         
         // Re-enable the run button
@@ -593,6 +598,7 @@ async function runSurvey() {
         
         // Enable next steps
         document.getElementById('downloadSurveyBtn').disabled = false;
+        document.getElementById('downloadSurveyCsvBtn').disabled = false;
         document.getElementById('nextToResultsBtn').disabled = false;
         document.getElementById('downloadResultsBtn').disabled = false;
         
@@ -717,28 +723,10 @@ function renderCharts() {
                     label: 'Responses',
                     data: chartData,
                     backgroundColor: [
-                        'rgba(255, 99, 132, 0.7)',
-                        'rgba(54, 162, 235, 0.7)',
-                        'rgba(255, 206, 86, 0.7)',
-                        'rgba(75, 192, 192, 0.7)',
-                        'rgba(153, 102, 255, 0.7)',
-                        'rgba(255, 159, 64, 0.7)',
-                        'rgba(199, 199, 199, 0.7)',
-                        'rgba(83, 102, 255, 0.7)',
-                        'rgba(40, 159, 64, 0.7)',
-                        'rgba(210, 199, 199, 0.7)'
+                        'rgba(255, 99, 132, 0.7)'
                     ],
                     borderColor: [
-                        'rgb(255, 99, 132)',
-                        'rgb(54, 162, 235)',
-                        'rgb(255, 206, 86)',
-                        'rgb(75, 192, 192)',
-                        'rgb(153, 102, 255)',
-                        'rgb(255, 159, 64)',
-                        'rgb(199, 199, 199)',
-                        'rgb(83, 102, 255)',
-                        'rgb(40, 159, 64)',
-                        'rgb(210, 199, 199)'
+                        'rgb(255, 99, 132)'
                     ],
                     borderWidth: 1
                 }]
@@ -948,40 +936,6 @@ function populateResultsTable(data = null) {
         
         tableBody.appendChild(tr);
     });
-}
-
-function downloadCompleteResults() {
-    if (surveyResults.length === 0) {
-        showError("No results to download");
-        return;
-    }
-    
-    const fields = Object.keys(surveyResults[0]);
-    const csvContent = [
-        fields.join(','), // Header row
-        ...surveyResults.map(result => 
-            fields.map(field => {
-                // Properly escape CSV values
-                let value = result[field] || '';
-                // If value contains commas, quotes, or newlines, wrap in quotes
-                if (/[",\n\r]/.test(value)) {
-                    value = `"${value.replace(/"/g, '""')}"`;
-                }
-                return value;
-            }).join(',')
-        )
-    ].join('\n');
-    
-    // Create and trigger download
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'shell_complete_survey_results.csv');
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
 }
 
 // Utility functions

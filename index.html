@@ -72,7 +72,7 @@
                         <div class="card shadow-sm mb-3">
                             <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                                 <h3 class="fs-6 mb-0"><i class="bi bi-gear-fill me-2"></i>Persona Profile Configuration</h3>
-                                <select class="form-select form-select-sm ms-2" id="segmentSelect" style="width: auto;">
+                                <select class="form-select form-select-sm ms-2" id="segmentSelect" style="width: 205px;">
                                     <option value="segment1">Value Seeking Commuters</option>
                                     <option value="segment2">Brand-Loyal Motorists</option>
                                     <option value="segment3">Independent Tradespeople</option>
@@ -91,12 +91,12 @@
                                 
                                 <div class="row mb-2">
                                     <div class="col-md-6">
-                                        <label for="numPersonas" class="form-label fw-semibold small">Number of Personas: <span id="numPersonasValue" class="badge bg-primary">30</span></label>
+                                        <label for="numPersonas" class="form-label fw-semibold small">Number of People: <span id="numPersonasValue" class="badge bg-primary">30</span></label>
                                         <input type="range" class="form-range" id="numPersonas" min="10" max="1000" value="30">
                                     </div>
                                     <div class="col-md-6">
-                                        <label for="personaTemperature" class="form-label fw-semibold small">Temperature: <span id="personaTemperatureValue" class="badge bg-primary">0.7</span></label>
-                                        <input type="range" class="form-range" id="personaTemperature" min="0.1" max="1" step="0.1" value="0.7">
+                                        <label for="personaTemperature" class="form-label fw-semibold small">Temperature: <span id="personaTemperatureValue" class="badge bg-primary">0.9</span></label>
+                                        <input type="range" class="form-range" id="personaTemperature" min="0.1" max="1" step="0.1" value="0.9">
                                     </div>
                                 </div>
                                 
@@ -175,6 +175,7 @@
                 <option value="openai/gpt-4.1-mini" selected>OpenAI GPT-4.1-mini</option>
                 <option value="openai/gpt-4.1-nano">OpenAI GPT-4.1-nano</option>
                 <option value="anthropic/claude-3.5-sonnet">Anthropic Claude 3.5 Sonnet</option>
+                <option value="anthropic/claude-3.7-sonnet">Anthropic Claude 3.7 Sonnet</option>
                 <option value="anthropic/claude-3-haiku">Anthropic Claude 3.5 Haiku</option>
                 <option value="mistralai/mistral-large">Mistral Large</option>
                 <option value="meta-llama/llama-3-70b-instruct">Meta Llama 3 70B</option>
@@ -194,7 +195,7 @@
                                     <label for="surveyQuestions" class="form-label fw-semibold small">Survey Questions (one per line, format: Question: Option 1, Option 2, etc.)</label>
                                     <textarea class="form-control" id="surveyQuestions" rows="6">When choosing a fuel station, what matters most to you? (Price / Brand / Location / Loyalty Points)
 Do you prefer to receive fuel or service offers through: (App / SMS / Email / In-store Signage)
-How important is vehicle uptime or smooth engine performance to your daily routine? (1–5 scale)
+How important is vehicle smooth engine performance to your daily routine? (1–5 scale)
 
 </textarea>
                                 </div>
@@ -205,8 +206,8 @@ How important is vehicle uptime or smooth engine performance to your daily routi
                                         <input type="range" class="form-range" id="surveyParticipants" min="5" max="200" value="30">
                                     </div>
                                     <div class="col-md-6">
-                                        <label for="surveyTemperature" class="form-label fw-semibold small">Temperature: <span id="surveyTemperatureValue" class="badge bg-primary">0.5</span></label>
-                                        <input type="range" class="form-range" id="surveyTemperature" min="0.1" max="1" step="0.1" value="0.5">
+                                        <label for="surveyTemperature" class="form-label fw-semibold small">Temperature: <span id="surveyTemperatureValue" class="badge bg-primary">0.8</span></label>
+                                        <input type="range" class="form-range" id="surveyTemperature" min="0.1" max="1" step="0.1" value="0.8">
                                     </div>
                                 </div>
                                 
@@ -255,6 +256,7 @@ How important is vehicle uptime or smooth engine performance to your daily routi
                                 
                                 <div class="d-flex justify-content-between">
                                     <button id="downloadSurveyBtn" class="btn btn-outline-success btn-sm" disabled><i class="bi bi-download me-1"></i>Download Results (JSON)</button>
+                                    <button id="downloadSurveyCsvBtn" class="btn btn-secondary" disabled>Download Results (CSV)</button>
                                     <button id="nextToResultsBtn" class="btn btn-warning btn-sm" disabled><i class="bi bi-arrow-right me-1"></i>Next: View Analysis</button>
                                 </div>
                             </div>
