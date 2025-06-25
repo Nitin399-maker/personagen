@@ -5,26 +5,21 @@ let surveyQuestions = [];
 let surveyOptions = [];
 let charts = [];
 let generatedCode = '';
-
 // DOM elements and initialization
 document.addEventListener('DOMContentLoaded', function() {
     const segmentSelect = document.getElementById('segmentSelect');
     const segmentPrompt = document.getElementById('segmentPrompt');
     const fieldsList = document.getElementById('fieldsList');
-
     let segmentData = {};
-
     // Load JSON file
     fetch('segments.json')
         .then(response => response.json())
         .then(data => {
             segmentData = data;
-
             // Populate default
             const selectedSegment = segmentData[segmentSelect.value];
             segmentPrompt.value = selectedSegment.description;
             fieldsList.value = selectedSegment.fields;
-
             // Handle segment changes
             segmentSelect.addEventListener('change', () => {
                 const selectedSegment = segmentData[segmentSelect.value];
@@ -32,11 +27,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 fieldsList.value = selectedSegment.fields;
             });
         })
-
     // Hide sections initially
     document.getElementById('generatedCodeSection').style.display = 'none';
     document.getElementById('personasSection').style.display = 'none';
-
     // Initialize sliders with their display values
     document.getElementById('numPersonas').addEventListener('input', function() {
         document.getElementById('numPersonasValue').textContent = this.value;
@@ -53,7 +46,6 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('surveyTemperature').addEventListener('input', function() {
         document.getElementById('surveyTemperatureValue').textContent = this.value;
     });
-
     // Initialize model select dropdowns with options from template
     const modelTemplate = document.getElementById('modelOptionsTemplate');
     document.querySelectorAll('.model-select').forEach(select => {
@@ -67,14 +59,12 @@ document.addEventListener('DOMContentLoaded', function() {
         // Scroll to generated code section
         document.getElementById('generatedCodeSection').scrollIntoView({ behavior: 'smooth' });
     });
-
     document.getElementById('executeCodeBtn').addEventListener('click', async function() {
         await executePersonaCode();
         document.getElementById('personasSection').style.display = 'block';
         // Scroll to personas section
         document.getElementById('personasSection').scrollIntoView({ behavior: 'smooth' });
     });
-
     document.getElementById('downloadPersonasBtn').addEventListener('click', () => {
     downloadCsv(personas, 'shell_synthetic_personas.csv', "No personas to download");});
     document.getElementById('nextToSurveyBtn').addEventListener('click', () => {
@@ -94,7 +84,6 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('downloadResultsBtn').addEventListener('click', () => {
     downloadCsv(surveyResults, 'shell_complete_survey_results.csv', "No results to download");});
 });
-
 // STEP 1: Generate Persona Code
 async function generatePersonaCode() {
     try {
@@ -121,13 +110,11 @@ async function generatePersonaCode() {
         // Prepare prompt for the LLM
         const prompt = `
         Write a JavaScript code to  generate REALISTIC fake data of ${numPersonas} rows of persona based on the following profile and fields provided
-
         When listing possible values for fields, go beyond the examples above to be FULLY comprehensive.
         When picking values, use realistic distributions for each value based on real-life.
         <PROFILE>
         ${segmentPrompt}
         </PROFILE>
-
         <FIELDS>
         These are the fields I need for each persona:
         ${fieldsList.join('\n')}
@@ -187,7 +174,6 @@ async function generatePersonaCode() {
         // Update progress
         progressBarInner.style.width = '100%';
         progressBarInner.textContent = 'Code generated';
-
         // Hide the progress bar after a short delay (optional)
         setTimeout(() => {
             progressBar.style.display = 'none';
@@ -203,7 +189,6 @@ async function generatePersonaCode() {
         progressBar.classList.add('d-none');
     }
 }
-
 function executePersonaCode() {
     try {
         // Show progress
@@ -243,7 +228,6 @@ function executePersonaCode() {
         // Update progress
         progressBarInner.style.width = '100%';
         progressBarInner.textContent = `${personas.length} personas generated`;
-
         // Hide the progress bar after a short delay (optional)
         setTimeout(() => {
             progressBar.style.display = 'none';
@@ -264,7 +248,6 @@ function executePersonaCode() {
         progressBar.classList.add('d-none');
     }
 }
-
 function displayPersonas() {
     if (personas.length === 0) {
         return;
@@ -303,7 +286,6 @@ function displayPersonas() {
         tableBody.appendChild(tr);
     });
 }
-
 function downloadCsv(data, filename, errorMessage) {
     if (!data || data.length === 0) {
         showError(errorMessage || "No data to download");
@@ -341,7 +323,6 @@ function downloadCsv(data, filename, errorMessage) {
     link.click();
     document.body.removeChild(link);
 }
-
 // STEP 2: Run Survey
 function parseQuestions() {
     const questionsText = document.getElementById('surveyQuestions').value;
@@ -350,11 +331,9 @@ function parseQuestions() {
     // Clear previous values from global variables
     surveyQuestions = [];
     surveyOptions = [];
-
     questionLines.forEach(line => {
         let question = line.trim();
         let options = [];
-
         // Check for options in parentheses with or without italics: _(Options)_ or (Options)
         const parenthesesMatch = line.match(/[\(_]([^)]+)[\)_]/);
         if (parenthesesMatch) {
@@ -388,7 +367,6 @@ function parseQuestions() {
                 options = optionsText.split(/\s*\/\s*|\s*,\s*/).map(opt => opt.trim()).filter(opt => opt);
             }
         }
-
         // Check for scale format (e.g., "1-5 scale" or "1–5 scale")
         const scaleMatch = line.match(/\(?\s*(\d+[\-–]\d+)\s+scale\s*\)?/i);
         if (scaleMatch) {
@@ -402,14 +380,11 @@ function parseQuestions() {
             // Clean up the question by removing the scale part
             question = line.replace(/\s*\(?\s*\d+[\-–]\d+\s+scale\s*\)?\s*/i, '').trim();
         }
-
         surveyQuestions.push(question);
         surveyOptions.push(options);
     });
-
     return { surveyQuestions, surveyOptions };
 }
-
 function generateJsonSchema() {
     const { surveyQuestions, surveyOptions } = parseQuestions();
     
@@ -422,7 +397,8 @@ function generateJsonSchema() {
     const schema = {
         type: "object",
         properties: {},
-        required: []
+        required: [],
+        "additionalProperties": false
     };
     
     surveyQuestions.forEach((question, index) => {
@@ -435,7 +411,15 @@ function generateJsonSchema() {
             enum: options
         };
         
+        // Add reasoning field
+        schema.properties[`${questionId}_reasoning`] = {
+            type: "string",
+            description: `Reasoning for ${question}`
+        };
+        
+        // Add both to required fields
         schema.required.push(questionId);
+        schema.required.push(`${questionId}_reasoning`);
     });
     
     // Display the schema
@@ -444,7 +428,6 @@ function generateJsonSchema() {
     
     return schema;
 }
-
 async function runSurvey() {
     try {
         if (personas.length === 0) {
@@ -500,7 +483,6 @@ async function runSurvey() {
             const progress = Math.round(((i + 1) / participants.length) * 100);
             progressBarInner.style.width = `${progress}%`;
             progressBarInner.textContent = `Processed ${i + 1} of ${participants.length} (${progress}%)`;
-
             if(i==participants.length-1){
                 setTimeout(() => {
                         progressBar.style.display = 'none';
@@ -524,6 +506,15 @@ IMPORTANT: Your profile should strongly influence your choices. Different person
                 `${q} (Choose one: ${surveyOptions[idx].join(', ')})`
             ).join('\n\n');
             
+            // Build structured response format
+            const responseFormat = {
+            type: "json_schema",
+            json_schema: {
+                name: "surveyResponse",
+                strict: true,
+                schema: schema
+            }
+            };
             // Call the API
             const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
                 method: 'POST',
@@ -538,9 +529,9 @@ IMPORTANT: Your profile should strongly influence your choices. Different person
                     temperature: temperature,
                     messages: [
                         { role: "system", content: systemPrompt },
-                        { role: "user", content: `Please answer the following survey questions. Respond in JSON format according to the provided schema:\n\n${JSON.stringify(schema, null, 2)}\n\nQuestions:\n${questionsPrompt}` }
+                        { role: "user", content: `Please answer the following survey questions by choosing one of the options(enum). For each answer, provide a detailed reasoning explaining WHY you selected that option based on your persona's characteristics. you must respond with valid JSON only, that must use double quotes for all keys and string values, include commas between all key-value pairs, contain no trailing commas with no extra text or markdown outside the JSON object, it must have same keys that is defined in the schema, include all required fields. Respond in JSON format according to the provided schema:\n\n ${JSON.stringify(schema, null, 2)}\n\n Questions:\n${questionsPrompt}` }
                     ],
-                    response_format: { type: "json_object" }
+                    response_format: responseFormat
                 })
             });
             
@@ -610,7 +601,6 @@ IMPORTANT: Your profile should strongly influence your choices. Different person
         progressBar.classList.add('d-none');
     }
 }
-
 function selectRandomIndices(max, count) {
     // Function to randomly select 'count' indices from 0 to max-1 without duplicates
     const indices = Array.from({ length: max }, (_, i) => i);
@@ -624,7 +614,6 @@ function selectRandomIndices(max, count) {
     // Take the first 'count' elements
     return indices.slice(0, count);
 }
-
 function downloadSurveyJson() {
     if (surveyResults.length === 0) {
         showError("No survey results to download");
@@ -643,7 +632,6 @@ function downloadSurveyJson() {
     link.click();
     document.body.removeChild(link);
 }
-
 // STEP 3: Results Analysis and Visualization
 function renderCharts() {
     if (surveyResults.length === 0) {
@@ -665,8 +653,9 @@ function renderCharts() {
     charts.forEach(chart => chart.destroy());
     charts = [];
     
-    // Get question keys (assuming they follow the pattern question_1, question_2, etc.)
-    const questionKeys = Object.keys(surveyResults[0]).filter(key => key.startsWith('question_'));
+    // Get question keys (excluding reasoning fields)
+    const questionKeys = Object.keys(surveyResults[0])
+        .filter(key => key.startsWith('question_') && !key.includes('_reasoning'));
     
     // Create charts for each question
     questionKeys.forEach((questionKey, index) => {
@@ -775,8 +764,10 @@ function generateFilters() {
     const filterControls = document.getElementById('filterControls');
     filterControls.innerHTML = '';
     
-    // Get all persona fields (excluding survey questions)
-    const personaFields = Object.keys(surveyResults[0]).filter(key => !key.startsWith('question_') && key !== 'participant_id');
+    // Get all persona fields (excluding survey questions and reasoning fields)
+    const personaFields = Object.keys(surveyResults[0]).filter(key => 
+        !key.startsWith('question_') && key !== 'participant_id'
+    );
     
     // Create filter dropdowns for categorical fields
     personaFields.forEach(field => {
@@ -859,8 +850,9 @@ function updateCharts(filteredResults) {
         return;
     }
     
-    // Get question keys
-    const questionKeys = Object.keys(filteredResults[0]).filter(key => key.startsWith('question_'));
+    // Get question keys (excluding reasoning fields)
+    const questionKeys = Object.keys(filteredResults[0])
+        .filter(key => key.startsWith('question_') && !key.includes('_reasoning'));
     
     // Update each chart with new data
     questionKeys.forEach((questionKey, index) => {
@@ -891,7 +883,6 @@ function updateCharts(filteredResults) {
         }
     });
 }
-
 function resetFilters() {
     // Reset all filter controls to "All"
     const filterControls = document.querySelectorAll('.filter-control');
@@ -902,7 +893,6 @@ function resetFilters() {
     // Apply filters (which will now be empty)
     applyFilters();
 }
-
 function populateResultsTable(data = null) {
     const tableData = data || surveyResults;
     if (tableData.length === 0) return;
@@ -930,14 +920,33 @@ function populateResultsTable(data = null) {
         
         fields.forEach(field => {
             const td = document.createElement('td');
-            td.textContent = result[field];
+            
+            // Truncate reasoning fields in the UI display
+            if (field.includes('_reasoning')) {
+                const fullText = result[field] || '';
+                // Only truncate if the text is longer than 50 characters
+                if (fullText.length > 50) {
+                    const truncatedText = fullText.substring(0, 50) + '...';
+                    td.textContent = truncatedText;
+                    
+                    // Store the full text as a data attribute for CSV export
+                    td.setAttribute('data-full-text', fullText);
+                    
+                    // Optional: Add a tooltip to show the full text on hover
+                    td.title = fullText;
+                } else {
+                    td.textContent = fullText;
+                }
+            } else {
+                td.textContent = result[field];
+            }
+            
             tr.appendChild(td);
         });
         
         tableBody.appendChild(tr);
     });
 }
-
 // Utility functions
 function showError(message) {
     const errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
