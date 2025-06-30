@@ -46,11 +46,23 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('surveyTemperature').addEventListener('input', function() {
         document.getElementById('surveyTemperatureValue').textContent = this.value;
     });
-    // Initialize model select dropdowns with options from template
-    const modelTemplate = document.getElementById('modelOptionsTemplate');
-    document.querySelectorAll('.model-select').forEach(select => {
-        select.innerHTML = modelTemplate.innerHTML;
-    });
+    // Initialize model select dropdowns with specific options for each section
+    const personaModelSelect = document.getElementById('modelSelect');
+    const surveyModelSelect = document.getElementById('surveyModelSelect');
+    
+    // Set options for persona generation (all models)
+    personaModelSelect.innerHTML = document.getElementById('modelOptionsTemplate').innerHTML;
+    
+    // Set options for survey (only GPT and Gemini models)
+    const surveyModels = [
+        { value: 'openai/gpt-4.1-mini', label: 'GPT-4.1-mini' },
+        { value: 'openai/gpt-4.1-nano', label: 'GPT-4.1-nano' },
+        { value: 'google/gemini-2.0-flash-001', label: 'Gemini Flash 2.0' }
+    ];
+    
+    surveyModelSelect.innerHTML = surveyModels
+        .map(model => `<option value="${model.value}">${model.label}</option>`)
+        .join('');
         
     // Button event listeners
     document.getElementById('generateCodeBtn').addEventListener('click', async function() {
@@ -398,7 +410,7 @@ function generateJsonSchema() {
         type: "object",
         properties: {},
         required: [],
-        "additionalProperties": false
+        additionalProperties: false
     };
     
     surveyQuestions.forEach((question, index) => {
@@ -529,7 +541,7 @@ IMPORTANT: Your profile should strongly influence your choices. Different person
                     temperature: temperature,
                     messages: [
                         { role: "system", content: systemPrompt },
-                        { role: "user", content: `Please answer the following survey questions by choosing one of the options(enum). For each answer, provide a detailed reasoning explaining WHY you selected that option based on your persona's characteristics. you must respond with valid JSON only, that must use double quotes for all keys and string values, include commas between all key-value pairs, contain no trailing commas with no extra text or markdown outside the JSON object, it must have same keys that is defined in the schema, include all required fields. Respond in JSON format according to the provided schema:\n\n ${JSON.stringify(schema, null, 2)}\n\n Questions:\n${questionsPrompt}` }
+                        { role: "user", content: `Please answer the following survey questions by choosing one of the options(enum). For each answer, provide a detailed reasoning explaining WHY you selected that option based on your persona's characteristics. you must respond with valid JSON only, that must use double quotes for all keys and string values, include commas between all key-value pairs, contain no trailing commas with no extra text or markdown outside the JSON object, it must have same keys that is defined in the schema, include all required fields.\n\n Questions:\n${questionsPrompt}` }
                     ],
                     response_format: responseFormat
                 })
