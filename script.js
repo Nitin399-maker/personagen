@@ -46,11 +46,14 @@ function updateProviderStatus() {
 function updateModelOptions() {
     const personaModelSelect = document.getElementById('modelSelect');
     const surveyModelSelect = document.getElementById('surveyModelSelect');
+    
+    const preferredModels = ['gpt-4.1-mini', 'gpt-4.1-nano', 'gpt-4o-mini'];
 
-    if (llmConfig && llmConfig.models && Array.isArray(llmConfig.models) && llmConfig.models.length > 0) {
+    if (llmConfig && Array.isArray(llmConfig.models) && llmConfig.models.length > 0) {
         personaModelSelect.innerHTML = '';
         surveyModelSelect.innerHTML = '';
 
+        // Normalize models
         const modelsList = llmConfig.models.map(model => {
             if (typeof model === 'string') {
                 return { id: model, name: model };
@@ -65,32 +68,30 @@ function updateModelOptions() {
             }
         }).filter(model => model.id);
 
-        console.log('Processed models list:', modelsList);
-
-        // Fill personaModelSelect with all models
-        modelsList.forEach(model => {
-            const option = document.createElement('option');
-            option.value = model.id;
-            option.textContent = model.name;
-            personaModelSelect.appendChild(option);
-        });
-
-        // Only include specific survey models (exact match)
-        const preferredSurveyModels = ['gpt-4.1-mini', 'gpt-4.1-nano', 'gpt-4o-mini'];
-        const modelsToUse = modelsList.filter(model =>
-            preferredSurveyModels.includes(model.id)
+        // Filter only preferred models
+        const filteredModels = modelsList.filter(model => 
+            preferredModels.includes(model.id)
         );
 
-        modelsToUse.forEach(model => {
-            const option = document.createElement('option');
-            option.value = model.id;
-            option.textContent = model.name;
-            surveyModelSelect.appendChild(option);
+        console.log('Filtered models list:', filteredModels);
+
+        // Populate both selects with filtered models
+        filteredModels.forEach(model => {
+            const option1 = document.createElement('option');
+            option1.value = model.id;
+            option1.textContent = model.name;
+            personaModelSelect.appendChild(option1);
+
+            const option2 = document.createElement('option');
+            option2.value = model.id;
+            option2.textContent = model.name;
+            surveyModelSelect.appendChild(option2);
         });
 
-        console.log(`Loaded ${modelsList.length} models for persona generation, ${modelsToUse.length} for surveys`);
+        console.log(`Loaded ${filteredModels.length} models for both persona and survey selectors`);
     }
 }
+
 
 // Initialize LLM configuration on page load
 async function initializeLLMConfig() {
