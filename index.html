@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shell Synthetic Persona Survey</title>
-        <link
+    <title>Synthetic Persona Survey</title>
+    <link
     rel="icon"
     type="image/svg+xml"
     href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PGNpcmNsZSBjeD0iMTYiIGN5PSIxNiIgcj0iMTUiIGZpbGw9IiMyNTYzZWIiLz48cGF0aCBmaWxsPSIjZmZmIiBkPSJtMTYgNyAyIDcgNyAyLTcgMi0yIDctMi03LTctMiA3LTJaIi8+PC9zdmc+" />
@@ -23,6 +23,10 @@
         [data-bs-theme="dark"] .card{background-color:#343a40}
         [data-bs-theme="dark"] .text-dark{color:#f8f9fa!important}
         [data-bs-theme="dark"] .badge.bg-light{background-color:#6c757d!important;color:#fff!important}
+        .provider-status {
+            font-size: 0.75rem;
+            margin-top: 0.25rem;
+        }
     </style>
 </head>
 <body>
@@ -43,295 +47,339 @@
             <div class="col-12 text-center">
                 <div class="card border-0 bg-gradient shadow-sm mb-3">
                     <div class="card-body py-3">
-                        <h1 class="display-6 fw-bold text-primary">Shell Synthetic Persona Survey Demo</h1>
+                        <h1 class="display-6 fw-bold text-primary">Synthetic Persona Survey Demo</h1>
                         <p class="lead text-muted small">Generate synthetic personas, run surveys through LLMs, and analyze results</p>
                     </div>
                 </div>
             </div>
-        </div>
-        
-        <ul class="nav nav-pills nav-fill bg-body-tertiary rounded-3 p-2 shadow-sm mb-3" id="mainTabs" role="tablist">
-            <li class="nav-item" role="presentation">
-                <button class="nav-link active fw-semibold" id="generate-tab" data-bs-toggle="tab" data-bs-target="#generate" type="button" role="tab">
-                    <i class="bi bi-people-fill me-2"></i> 1. Generate Personas
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link fw-semibold" id="survey-tab" data-bs-toggle="tab" data-bs-target="#survey" type="button" role="tab">
-                    <i class="bi bi-clipboard2-data-fill me-2"></i> 2. Run Survey
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link fw-semibold" id="results-tab" data-bs-toggle="tab" data-bs-target="#results" type="button" role="tab">
-                    <i class="bi bi-bar-chart-fill me-2"></i> 3. Results & Analysis
-                </button>
-            </li>
-        </ul>
-        
-        <div class="tab-content" id="mainTabsContent">
-            <!-- STEP 1: Generate Personas -->
-            <div class="tab-pane fade show active" id="generate" role="tabpanel">
-                <div class="row">
-                    <div class="col-12">
-                        <div class="card shadow-sm mb-3">
-                            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                                <h3 class="fs-6 mb-0"><i class="bi bi-gear-fill me-2"></i>Persona Profile Configuration</h3>
-                                <select class="form-select form-select-sm ms-2" id="segmentSelect" style="width: 205px;">
-                                    <option value="segment1">Value Seeking Commuters</option>
-                                    <option value="segment2">Brand-Loyal Motorists</option>
-                                    <option value="segment3">Independent Tradespeople</option>
-                                    <option value="segment4">DIY Car Enthusiasts</option>
-                                </select>
-                            </div>
-                            <div class="card-body bg-body-tertiary">
-                                <div class="mb-2">
-                                    <label for="segmentPrompt" class="form-label fw-semibold small">Segment Description</label>
-                                    <textarea class="form-control" id="segmentPrompt" rows="5"></textarea>
-                                </div>
-                                <div class="mb-2">
-                                    <label for="fieldsList" class="form-label fw-semibold small">Fields (one per line)</label>
-                                    <textarea class="form-control" id="fieldsList" rows="6"></textarea>
-                                </div>
-                                
-                                <div class="row mb-2">
-                                    <div class="col-md-6">
-                                        <label for="numPersonas" class="form-label fw-semibold small">Number of People: <span id="numPersonasValue" class="badge bg-primary">30</span></label>
-                                        <input type="range" class="form-range" id="numPersonas" min="10" max="1000" value="30">
-                                    </div>
-                                    <div class="col-md-6" style="display: none;">
-                                        <label for="personaTemperature" class="form-label fw-semibold small">Temperature: <span id="personaTemperatureValue" class="badge bg-primary">1</span></label>
-                                        <input type="range" class="form-range" id="personaTemperature" min="0.1" max="1" step="0.1" value="1">
-                                    </div>
-                                </div>
-                                
-                                <div class="row mb-2">
-                                    <div class="col-md-6">
-                                        <label for="modelSelect" class="form-label fw-semibold small">Model</label>
-                                        <select class="form-select model-select" id="modelSelect"></select>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label for="apiKeyInput" class="form-label fw-semibold small">OpenRouter API Key</label>
-                                        <input type="password" class="form-control" id="apiKeyInput" placeholder="Enter your OpenRouter API key">
-                                    </div>
-                                </div>
-                                
-                                <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-2">
-                                    <button id="generateCodeBtn" class="btn btn-primary btn-sm"><i class="bi bi-code-slash me-1"></i>Generate Code</button>
-                                    <button id="executeCodeBtn" class="btn btn-success btn-sm ms-2" disabled><i class="bi bi-play-fill me-1"></i>Execute Code</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="row" >
-                    <div id="generationProgress" class="progress mb-2 d-none">
-                        <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
-                    </div>
-                    <div class="col-12" id="generatedCodeSection">
-                        <div class="card shadow-sm mb-3">
-                            <div class="card-header bg-secondary text-white">
-                                <h3 class="fs-6 mb-0"><i class="bi bi-code-square me-2"></i>Generated Code</h3>
-                            </div>
-                            <div class="card-body p-0">
-                                <pre id="generatedCode" class="p-2 bg-body-tertiary rounded-bottom mb-0" style="max-height: 150px; overflow-y: auto;">// Code will appear here...</pre>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="row" >
-                    <div id="generationProgress1" class="progress mb-2 d-none">
-                        <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
-                    </div>
-                    <div class="col-12" id="personasSection">
-                        <div class="card shadow-sm mb-3">
-                            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-                                <h3 class="fs-6 mb-0"><i class="bi bi-people-fill me-2"></i>Generated Personas</h3>
-                                <span id="personaCount" class="badge bg-dark text-light">0</span>
-                            </div>
-                            <div class="card-body">
-                                <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
-                                    <table id="personaTable" class="table table-sm table-striped table-hover">
-                                        <thead class="table-dark sticky-top">
-                                            <tr id="personaTableHeader">
-                                                <th>Loading...</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="personaTableBody">
-                                            <tr>
-                                                <td>No personas generated yet</td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                                <div class="d-flex justify-content-between mt-2">
-                                    <button id="downloadPersonasBtn" class="btn btn-outline-success btn-sm" disabled><i class="bi bi-download me-1"></i>Download Personas (CSV)</button>
-                                    <button id="nextToSurveyBtn" class="btn btn-warning btn-sm" disabled><i class="bi bi-arrow-right me-1"></i>Next: Set Up Survey</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            <!-- Demo Section -->
+<div id="demosSection" class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h3 class="fs-5 mb-0"><i class="bi bi-lightning-charge-fill me-2"></i>Quick Demos</h3>
             </div>
-            <!-- Template for model options to be cloned -->
-            <template id="modelOptionsTemplate">
-                <option value="openai/gpt-4.1-mini" selected>OpenAI GPT-4.1-mini</option>
-                <option value="openai/gpt-4.1-nano">OpenAI GPT-4.1-nano</option>
-                <option value="anthropic/claude-3.5-sonnet">Anthropic Claude 3.5 Sonnet</option>
-                <option value="anthropic/claude-3.7-sonnet">Anthropic Claude 3.7 Sonnet</option>
-                <option value="anthropic/claude-3-haiku">Anthropic Claude 3.5 Haiku</option>
-                <option value="mistralai/mistral-large">Mistral Large</option>
-                <option value="meta-llama/llama-3-70b-instruct">Meta Llama 3 70B</option>
-                <option value="deepseek/deepseek-chat">DeepSeek V3</option>
-                <option value="google/gemini-2.0-flash-001">Gemini Flash 2.0</option>
-            </template>        
-            <!-- STEP 2: Run Survey -->
-            <div class="tab-pane fade" id="survey" role="tabpanel">
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="card shadow-sm mb-3 h-100">
-                            <div class="card-header bg-primary text-white">
-                                <h3 class="fs-6 mb-0"><i class="bi bi-clipboard-check-fill me-2"></i>Survey Configuration</h3>
-                            </div>
-                            <div class="card-body bg-body-tertiary">
-                                <div class="mb-2">
-                                    <label for="surveyQuestions" class="form-label fw-semibold small">Survey Questions (one per line, format: Question: Option 1, Option 2, etc.)</label>
-                                    <textarea class="form-control" id="surveyQuestions" rows="10">When choosing a fuel station, what matters most to you? (Price / Brand / Location / Loyalty Points)
-Do you prefer to receive fuel or service offers through: (App / SMS / Email / In-store Signage)
-When are you most likely to refuel your vehicle?(before 9 AM / 9 AM – 3 PM / after 3 PM / Only on weekends)
-If Shell introduced a bundled service that includes fuel, a free oil check, and coffee, how appealing would that be to you?(I would use it regularly / I would try it once / depends on the price / I prefer simpler fuel-only options)
-
-</textarea>
-                                </div>
-                                
-                                <div class="row mb-2">
-                                    <div class="col-md-6">
-                                        <label for="surveyParticipants" class="form-label fw-semibold small">Number of Survey Participants: <span id="surveyParticipantsValue" class="badge bg-primary">30</span></label>
-                                        <input type="range" class="form-range" id="surveyParticipants" min="5" max="200" value="30">
-                                    </div>
-                                    <div class="col-md-6" style="display: none;">
-                                        <label for="surveyTemperature" class="form-label fw-semibold small">Temperature: <span id="surveyTemperatureValue" class="badge bg-primary">1</span></label>
-                                        <input type="range" class="form-range" id="surveyTemperature" min="0.1" max="1" step="0.1" value="1">
-                                    </div>
-                                </div>
-                                
-                                <div class="mb-2">
-                                    <label for="surveyModelSelect" class="form-label fw-semibold small">Model</label>
-                                    <select class="form-select model-select" id="surveyModelSelect"></select>
-                                </div>
-                                
-                                <div class="d-grid">
-                                    <button id="runSurveyBtn" class="btn btn-primary btn-sm" disabled><i class="bi bi-play-circle-fill me-1"></i>Run Survey</button>
-                                </div>
-                            </div>
-                        </div>
+            <div class="card-body bg-body-tertiary">
+                <p class="small text-muted mb-3">
+                    Click on any demo card.
+                </p>
+                <div id="demoLoadingSpinner" class="text-center mb-3 d-none">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading demo...</span>
                     </div>
-                    
-                    <div class="col-md-6">
-                        <div class="card shadow-sm mb-3 h-100">
-                            <div class="card-header bg-success text-white">
-                                <h3 class="fs-6 mb-0"><i class="bi bi-graph-up-arrow me-2"></i>Survey Progress</h3>
-                            </div>
-                            <div class="card-body">
-                                <div id="surveyProgress" class="progress mb-3 d-none">
-                                    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
-                                </div>
-                                
-                                <div class="card mb-2">
-                                    <div class="card-header bg-info text-white py-1">
-                                        <h5 class="fs-6 mb-0"><i class="bi bi-braces me-1"></i>JSON Schema</h5>
-                                    </div>
-                                    <div class="card-body p-0">
-                                        <pre id="jsonSchemaDisplay" class="p-2 bg-body-tertiary rounded-bottom mb-0" style="max-height: 160px; overflow-y: auto;">No schema generated yet</pre>
-                                    </div>
-                                </div>
-                                
-                                <div class="card mb-2">
-                                    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center py-1">
-                                        <h5 class="fs-6 mb-0"><i class="bi bi-journal-check me-1"></i>Survey Results</h5>
-                                        <span id="responseCount" class="badge bg-dark text-light">0</span>
-                                    </div>
-                                    <div class="card-body bg-body-tertiary">
-                                        <div id="surveyResultsPreview" style="max-height: 220px; overflow-y: auto;">
-                                            <p class="text-muted small"><i class="bi bi-info-circle me-1"></i>Survey responses will appear here...</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="d-flex justify-content-between">
-                                    <button id="downloadSurveyBtn" class="btn btn-outline-success btn-sm" disabled><i class="bi bi-download me-1"></i>Download Results (JSON)</button>
-                                    <button id="downloadSurveyCsvBtn" class="btn btn-secondary" disabled>Download Results (CSV)</button>
-                                    <button id="nextToResultsBtn" class="btn btn-warning btn-sm" disabled><i class="bi bi-arrow-right me-1"></i>Next: View Analysis</button>
-                                </div>
-                            </div>
-                        </div>
+                    <p class="text-muted small mt-2">Loading demo data...</p>
+                </div>
+                <div class="container-fluid p-0">
+                    <div id="demos" class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4 g-3">
                     </div>
-                </div>
-            </div>
-            
-<!-- STEP 3: Results & Analysis -->
-<div class="tab-pane fade" id="results" role="tabpanel">
-    <div class="row mb-3">
-        <div class="col-md-2">
-            <!-- Filters Card - Positioned on the left -->
-            <div class="card shadow-sm mb-3">
-                <div class="card-header bg-primary text-white">
-                    <h3 class="fs-6 mb-0"><i class="bi bi-funnel-fill me-2"></i>Filter Results</h3>
-                </div>
-                <div class="card-body bg-body-tertiary">
-                    <div id="filterControls">
-                        <p class="text-muted small"><i class="bi bi-info-circle me-1"></i>Filters will be dynamically generated based on persona fields</p>
-                    </div>
-                    <div class="d-flex justify-content-center mt-2">
-                        <button id="resetFiltersBtn" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-counterclockwise me-1"></i>Reset</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-md-10">
-            <!-- Charts Container - Takes remaining space -->
-            <div class="card shadow-sm mb-3">
-                <div class="card-header bg-success text-white">
-                    <h3 class="fs-6 mb-0"><i class="bi bi-pie-chart-fill me-2"></i>Survey Results Charts</h3>
-                </div>
-                <div class="card-body bg-body-tertiary">
-                    <div id="chartsContainer" class="row">
-                        <p class="text-muted small"><i class="bi bi-info-circle me-1"></i>Charts will appear here once survey results are available</p>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Results Table Card -->
-            <div class="card shadow-sm">
-                <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
-                    <h3 class="fs-6 mb-0"><i class="bi bi-table me-2"></i>Results Table</h3>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
-                        <table id="resultsTable" class="table table-sm table-striped table-hover mb-0">
-                            <thead class="table-dark">
-                                <tr id="resultsTableHeader">
-                                    <th>No data available</th>
-                                </tr>
-                            </thead>
-                            <tbody id="resultsTableBody">
-                                <tr>
-                                    <td>Run the survey to see results</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                <div class="card-footer py-2">
-                    <button id="downloadResultsBtn" class="btn btn-success btn-sm" disabled><i class="bi bi-download me-1"></i>Download Complete Results (CSV)</button>
                 </div>
             </div>
         </div>
     </div>
 </div>
-    
+        </div>
+        
+        <!-- Remove the tab navigation and restructure content -->
+        <div class="container-fluid">
+            <!-- STEP 1: Generate Personas -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-primary text-white">
+                            <h3 class="fs-5 mb-0"><i class="bi bi-people-fill me-2"></i>1. Generate Personas</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-12">
+                                    <div class="card shadow-sm mb-3">
+                                        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                                            <h3 class="fs-6 mb-0"><i class="bi bi-gear-fill me-2"></i>Persona Profile Configuration</h3>
+                                            <select class="form-select form-select-sm ms-2" id="segmentSelect" style="width: 260px;">
+                                                <!-- options will be dynamically inserted by JS -->
+                                            </select>
+                                        </div>
+                                        <div class="card-body bg-body-tertiary">
+                                            <div class="mb-2">
+                                                <label for="segmentPrompt" class="form-label fw-semibold small">Segment Description</label>
+                                                <textarea class="form-control" id="segmentPrompt" rows="5"></textarea>
+                                            </div>
+                                            <div class="mb-2">
+                                                <label for="fieldsList" class="form-label fw-semibold small">Fields (one per line)</label>
+                                                <textarea class="form-control" id="fieldsList" rows="6"></textarea>
+                                            </div>
+                                            
+                                            <div class="row mb-2">
+                                                <div class="col-md-6">
+                                                    <label for="numPersonas" class="form-label fw-semibold small">Number of People: <span id="numPersonasValue" class="badge bg-primary">30</span></label>
+                                                    <input type="range" class="form-range" id="numPersonas" min="10" max="1000" value="30">
+                                                </div>
+                                                <div class="col-md-6" style="display: none;">
+                                                    <label for="personaTemperature" class="form-label fw-semibold small">Temperature: <span id="personaTemperatureValue" class="badge bg-primary">1</span></label>
+                                                    <input type="range" class="form-range" id="personaTemperature" min="0.1" max="1" step="0.1" value="1">
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="row mb-2">
+                                                <div class="col-md-6">
+                                                    <label for="modelSelect" class="form-label fw-semibold small">Model</label>
+                                                    <select class="form-select model-select" id="modelSelect"></select>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label class="form-label fw-semibold small">API Provider</label>
+                                                    <button id="configureProviderBtn" class="btn btn-outline-primary form-control text-start">
+                                                        <i class="bi bi-gear me-1"></i>Configure API Provider
+                                                    </button>
+                                                    <div id="providerStatus" class="provider-status text-muted">
+                                                        <i class="bi bi-exclamation-circle me-1"></i>No provider configured
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-2">
+                                                <button id="generateCodeBtn" class="btn btn-primary btn-sm"><i class="bi bi-code-slash me-1"></i>Generate Code</button>
+                                                <button id="executeCodeBtn" class="btn btn-success btn-sm ms-2" disabled><i class="bi bi-play-fill me-1"></i>Execute Code</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row" >
+                                <div id="generationProgress" class="progress mb-2 d-none">
+                                    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                                </div>
+                                <div class="col-12" id="generatedCodeSection">
+                                    <div class="card shadow-sm mb-3">
+                                        <div class="card-header bg-secondary text-white">
+                                            <h3 class="fs-6 mb-0"><i class="bi bi-code-square me-2"></i>Generated Code</h3>
+                                        </div>
+                                        <div class="card-body p-0">
+                                            <pre id="generatedCode" class="p-2 bg-body-tertiary rounded-bottom mb-0" style="max-height: 150px; overflow-y: auto;">// Code will appear here...</pre>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row" >
+                                <div id="generationProgress1" class="progress mb-2 d-none">
+                                    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                                </div>
+                                <div class="col-12" id="personasSection">
+                                    <div class="card shadow-sm mb-3">
+                                        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                                            <h3 class="fs-6 mb-0"><i class="bi bi-people-fill me-2"></i>Generated Personas</h3>
+                                            <span id="personaCount" class="badge bg-dark text-light">0</span>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                                                <table id="personaTable" class="table table-sm table-striped table-hover">
+                                                    <thead class="table-dark sticky-top">
+                                                        <tr id="personaTableHeader">
+                                                            <th>Loading...</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="personaTableBody">
+                                                        <tr>
+                                                            <td>No personas generated yet</td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                            <div class="d-flex justify-content-start mt-2">
+                                                <button id="downloadPersonasBtn" class="btn btn-outline-success btn-sm" disabled><i class="bi bi-download me-1"></i>Download Personas (CSV)</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Template for model options to be cloned -->
+            <template id="modelOptionsTemplate">
+                <option value="gpt-4o-mini" selected>GPT-4o-mini</option>
+                <option value="gpt-4o">GPT-4o</option>
+                <option value="gpt-4-turbo">GPT-4-turbo</option>
+                <option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet</option>
+                <option value="claude-3-5-haiku-20241022">Claude 3.5 Haiku</option>
+                <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash</option>
+                <option value="llama-3.1-70b-instruct">Llama 3.1 70B</option>
+                <option value="deepseek-chat">DeepSeek V3</option>
+            </template>        
+            <!-- STEP 2: Run Survey -->
+            <div class="row mb-4" id="surveySection" style="display: none;">
+                <div class="col-12">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-primary text-white">
+                            <h3 class="fs-5 mb-0"><i class="bi bi-clipboard2-data-fill me-2"></i>2. Run Survey</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="card shadow-sm mb-3 h-100">
+                                        <div class="card-header bg-primary text-white">
+                                            <h3 class="fs-6 mb-0"><i class="bi bi-clipboard-check-fill me-2"></i>Survey Configuration</h3>
+                                        </div>
+                                        <div class="card-body bg-body-tertiary">
+                                            <div class="mb-2">
+                                                <label for="surveyQuestions" class="form-label fw-semibold small">Survey Questions (one per line, format: Question: Option 1 / Option 2, etc.)</label>
+                                                <textarea class="form-control" id="surveyQuestions" rows="10">When choosing a fuel station, what matters most to you?
+(Price / Brand / Location / Loyalty Points)
+
+Do you prefer to receive fuel or service offers through:
+(App / SMS / Email / In-store Signage)
+
+When are you most likely to refuel your vehicle?
+(before 9 AM / 9 AM – 3 PM / after 3 PM / Only on weekends)
+
+If Shell introduced a bundled service that includes fuel, a free oil check, and coffee, how appealing would that be to you?
+(I would use it regularly / I would try it once / depends on the price / I prefer simpler fuel-only options)
+
+</textarea>
+                                            </div>
+                                            
+                                            <div class="row mb-2">
+                                                <div class="col-md-6">
+                                                    <label for="surveyParticipants" class="form-label fw-semibold small">Number of Survey Participants: <span id="surveyParticipantsValue" class="badge bg-primary">30</span></label>
+                                                    <input type="range" class="form-range" id="surveyParticipants" min="5" max="200" value="30">
+                                                </div>
+                                                <div class="col-md-6" style="display: none;">
+                                                    <label for="surveyTemperature" class="form-label fw-semibold small">Temperature: <span id="surveyTemperatureValue" class="badge bg-primary">1</span></label>
+                                                    <input type="range" class="form-range" id="surveyTemperature" min="0.1" max="1" step="0.1" value="1">
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="mb-2">
+                                                <label for="surveyModelSelect" class="form-label fw-semibold small">Model</label>
+                                                <select class="form-select model-select" id="surveyModelSelect"></select>
+                                            </div>
+                                            
+                                            <div class="d-grid">
+                                                <button id="runSurveyBtn" class="btn btn-primary btn-sm" disabled><i class="bi bi-play-circle-fill me-1"></i>Run Survey</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <div class="card shadow-sm mb-3 h-100">
+                                        <div class="card-header bg-success text-white">
+                                            <h3 class="fs-6 mb-0"><i class="bi bi-graph-up-arrow me-2"></i>Survey Progress</h3>
+                                        </div>
+                                        <div class="card-body">
+                                            <div id="surveyProgress" class="progress mb-3 d-none">
+                                                <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                                            </div>
+                                            
+                                            <div class="card mb-2">
+                                                <div class="card-header bg-info text-white py-1">
+                                                    <h5 class="fs-6 mb-0"><i class="bi bi-braces me-1"></i>JSON Schema</h5>
+                                                </div>
+                                                <div class="card-body p-0">
+                                                    <pre id="jsonSchemaDisplay" class="p-2 bg-body-tertiary rounded-bottom mb-0" style="max-height: 160px; overflow-y: auto;">No schema generated yet</pre>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="card mb-2">
+                                                <div class="card-header bg-success text-white d-flex justify-content-between align-items-center py-1">
+                                                    <h5 class="fs-6 mb-0"><i class="bi bi-journal-check me-1"></i>Survey Results</h5>
+                                                    <span id="responseCount" class="badge bg-dark text-light">0</span>
+                                                </div>
+                                                <div class="card-body bg-body-tertiary">
+                                                    <div id="surveyResultsPreview" style="max-height: 220px; overflow-y: auto;">
+                                                        <p class="text-muted small"><i class="bi bi-info-circle me-1"></i>Survey responses will appear here...</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="d-flex justify-content-start">
+                                                <button id="downloadSurveyBtn" class="btn btn-outline-success btn-sm" disabled><i class="bi bi-download me-1"></i>Download Results (JSON)</button>
+                                                <button id="downloadSurveyCsvBtn" class="btn btn-secondary ms-2" disabled>Download Results (CSV)</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- STEP 3: Results & Analysis -->
+            <div class="row mb-4" id="resultsSection" style="display: none;">
+                <div class="col-12">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-primary text-white">
+                            <h3 class="fs-5 mb-0"><i class="bi bi-bar-chart-fill me-2"></i>3. Results & Analysis</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-md-2">
+                                    <!-- Filters Card - Positioned on the left -->
+                                    <div class="card shadow-sm mb-3">
+                                        <div class="card-header bg-primary text-white">
+                                            <h3 class="fs-6 mb-0"><i class="bi bi-funnel-fill me-2"></i>Filter Results</h3>
+                                        </div>
+                                        <div class="card-body bg-body-tertiary">
+                                            <div id="filterControls">
+                                                <p class="text-muted small"><i class="bi bi-info-circle me-1"></i>Filters will be dynamically generated based on persona fields</p>
+                                            </div>
+                                            <div class="d-flex justify-content-center mt-2">
+                                                <button id="resetFiltersBtn" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-counterclockwise me-1"></i>Reset</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-10">
+                                    <!-- Charts Container - Takes remaining space -->
+                                    <div class="card shadow-sm mb-3">
+                                        <div class="card-header bg-success text-white">
+                                            <h3 class="fs-6 mb-0"><i class="bi bi-pie-chart-fill me-2"></i>Survey Results Charts</h3>
+                                        </div>
+                                        <div class="card-body bg-body-tertiary">
+                                            <div id="chartsContainer" class="row">
+                                                <p class="text-muted small"><i class="bi bi-info-circle me-1"></i>Charts will appear here once survey results are available</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Results Table Card -->
+                                    <div class="card shadow-sm">
+                                        <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
+                                            <h3 class="fs-6 mb-0"><i class="bi bi-table me-2"></i>Results Table</h3>
+                                        </div>
+                                        <div class="card-body p-0">
+                                            <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                                                <table id="resultsTable" class="table table-sm table-striped table-hover mb-0">
+                                                    <thead class="table-dark">
+                                                        <tr id="resultsTableHeader">
+                                                            <th>No data available</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="resultsTableBody">
+                                                        <tr>
+                                                            <td>Run the survey to see results</td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                        <div class="card-footer py-2">
+                                            <button id="downloadResultsBtn" class="btn btn-success btn-sm" disabled><i class="bi bi-download me-1"></i>Download Complete Results (CSV)</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal for displaying errors -->
     <div class="modal fade" id="errorModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-sm">
@@ -349,9 +397,10 @@ If Shell introduced a bundled service that includes fuel, a free oil check, and 
             </div>
         </div>
     </div>
+
+    <script type="module" src="script.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@gramex/ui@0.3.1/dist/dark-theme.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
-    <script src="script.js"></script>
 </body>
 </html>

@@ -1,107 +1,204 @@
-// Global variables to store data
+import { openaiConfig } from "https://cdn.jsdelivr.net/npm/bootstrap-llm-provider@1";
 let personas = [];
 let surveyResults = [];
 let surveyQuestions = [];
 let surveyOptions = [];
 let charts = [];
 let generatedCode = '';
-// DOM elements and initialization
-document.addEventListener('DOMContentLoaded', function() {
-    const segmentSelect = document.getElementById('segmentSelect');
-    const segmentPrompt = document.getElementById('segmentPrompt');
-    const fieldsList = document.getElementById('fieldsList');
-    let segmentData = {};
-    // Load JSON file
-    fetch('segments.json')
+let segmentData = {};
+let currentSegmentKey = "segment1";
+let llmConfig = null; 
+async function configureLLMProvider() {
+    try {
+        llmConfig = await openaiConfig({
+            title: "Configure API Provider",
+            baseURLLabel: "API Base URL",
+            apiKeyLabel: "API Key",
+            buttonLabel: "Save & Test Connection",
+            defaultBaseUrls: [
+                "https://llmfoundry.straivedemo.com/openai/v1",
+                "https://llmfoundry.straive.com/openai/v1",
+                "https://aipipe.org/api/v1",
+                "https://openrouter.com/api/v1",
+                "https://api.openai.com/v1"
+            ],
+            show: true 
+        });
+        updateProviderStatus();
+        updateModelOptions();
+        return llmConfig;
+    } catch (error) {
+        showError(`Provider configuration failed: ${error.message}`);
+    }
+}
+// Update provider status display
+function updateProviderStatus() {
+    const statusElement = document.getElementById('providerStatus');
+    if (llmConfig && llmConfig.baseURL && llmConfig.apiKey) {
+        statusElement.innerHTML = `<i class="bi bi-check-circle text-success me-1"></i>Connected to Provider`;
+        statusElement.className = 'provider-status text-success';
+    } else {
+        statusElement.innerHTML = '<i class="bi bi-exclamation-circle me-1"></i>No provider configured';
+        statusElement.className = 'provider-status text-muted';
+    }
+}
+
+function updateModelOptions() {
+    const personaModelSelect = document.getElementById('modelSelect');
+    const surveyModelSelect = document.getElementById('surveyModelSelect');
+    if (llmConfig && llmConfig.models && Array.isArray(llmConfig.models) && llmConfig.models.length > 0) {
+        personaModelSelect.innerHTML = '';
+        surveyModelSelect.innerHTML = '';
+        const modelsList = llmConfig.models.map(model => {
+            if (typeof model === 'string') {
+                return { id: model, name: model };
+            } else if (typeof model === 'object' && model !== null) {
+                return {
+                    id: model.id || model.name || model.model || String(model),
+                    name: model.name || model.id || model.model || String(model)
+                };
+            } else {
+                console.warn('Unknown model format:', model);
+                return { id: String(model), name: String(model) };
+            }
+        }).filter(model => model.id); // Filter out models without valid IDs
+        
+        console.log('Processed models list:', modelsList);
+        modelsList.forEach(model => {
+            const option = document.createElement('option');
+            option.value = model.id;
+            option.textContent = model.name;
+            personaModelSelect.appendChild(option);
+        });
+        const preferredSurveyModels = ['gpt-4o-mini', 'gpt-4o', 'gpt-4-turbo', 'claude-3-5-sonnet', 'gemini-2.0-flash'];
+        const availableSurveyModels = modelsList.filter(model => {
+            const modelId = (model.id || '').toLowerCase();
+            return preferredSurveyModels.some(preferred => 
+                modelId.includes(preferred.toLowerCase())
+            ) || modelId.includes('gpt') || modelId.includes('claude') || modelId.includes('gemini');
+        });
+        
+        const modelsToUse = availableSurveyModels.length > 0 ? availableSurveyModels : modelsList;
+        modelsToUse.forEach(model => {
+            const option = document.createElement('option');
+            option.value = model.id;
+            option.textContent = model.name;
+            surveyModelSelect.appendChild(option);
+        });
+        console.log(`Loaded ${modelsList.length} models for persona generation, ${modelsToUse.length} for surveys`);
+    }
+}
+// Initialize LLM configuration on page load
+async function initializeLLMConfig() {
+    try {
+        llmConfig = await openaiConfig({
+            defaultBaseUrls: [
+                "https://llmfoundry.straivedemo.com/openai/v1",
+                "https://llmfoundry.straive.com/openai/v1", 
+                "https://aipipe.org/api/v1",
+                "https://openrouter.com/api/v1",
+                "https://api.openai.com/v1"
+            ],
+            show: false // Don't force show modal, only show if not configured
+        });
+        updateProviderStatus();
+        updateModelOptions();
+    } catch (error) {
+        console.warn("No LLM provider configured yet:", error.message);
+        updateProviderStatus();
+        updateModelOptions(); // This will load fallback models
+    }
+}
+// Make API call using configured provider
+async function makeAPICall(messages, model, temperature = 1, responseFormat = null) {
+    if (!llmConfig || !llmConfig.baseURL || !llmConfig.apiKey) {throw new Error("API Error");}
+    const requestBody = { model: model,temperature: temperature,messages: messages};
+    if (responseFormat) {requestBody.response_format = responseFormat;}
+    const response = await fetch(`${llmConfig.baseURL}/chat/completions`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json','Authorization': `Bearer ${llmConfig.apiKey}`,
+            'HTTP-Referer': window.location.href,'X-Title': 'Synthetic Persona Survey'},
+        body: JSON.stringify(requestBody)
+    });
+    
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`API Error: ${errorData.error?.message || response.statusText}`);
+    }
+    const data = await response.json();
+    return data.choices[0].message.content;
+}
+function loadSegmentData(fileName, categoryKey) {
+    fetch(fileName)
         .then(response => response.json())
         .then(data => {
-            segmentData = data;
-            // Populate default
-            const selectedSegment = segmentData[segmentSelect.value];
-            segmentPrompt.value = selectedSegment.description;
-            fieldsList.value = selectedSegment.fields;
-            // Handle segment changes
-            segmentSelect.addEventListener('change', () => {
-                const selectedSegment = segmentData[segmentSelect.value];
-                segmentPrompt.value = selectedSegment.description;
-                fieldsList.value = selectedSegment.fields;
+            segmentData = data[categoryKey];
+            const segmentSelect = document.getElementById("segmentSelect");
+            segmentSelect.innerHTML = "";
+            for (const key in segmentData) {
+                const option = document.createElement("option");
+                option.value = key;
+                option.textContent = segmentData[key].name;
+                segmentSelect.appendChild(option);
+            }
+            currentSegmentKey = segmentSelect.value;
+            updateSegmentFields(currentSegmentKey);
+            segmentSelect.addEventListener("change", () => {
+                currentSegmentKey = segmentSelect.value;
+                updateSegmentFields(currentSegmentKey);
             });
         })
-    // Hide sections initially
+        .catch(error => {
+            console.error("Error loading segment data:", error);
+        });
+}
+function updateSegmentFields(segmentKey) {
+    const selectedSegment = segmentData[segmentKey];
+    document.getElementById("segmentPrompt").value = selectedSegment.description;
+    document.getElementById("fieldsList").value = selectedSegment.fields;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadSegmentData("segments.json", "shell");
+    initializeLLMConfig();
     document.getElementById('generatedCodeSection').style.display = 'none';
     document.getElementById('personasSection').style.display = 'none';
-    // Initialize sliders with their display values
     document.getElementById('numPersonas').addEventListener('input', function() {
         document.getElementById('numPersonasValue').textContent = this.value;
     });
-    
     document.getElementById('personaTemperature').addEventListener('input', function() {
         document.getElementById('personaTemperatureValue').textContent = this.value;
     });
-    
     document.getElementById('surveyParticipants').addEventListener('input', function() {
         document.getElementById('surveyParticipantsValue').textContent = this.value;
     });
-    
     document.getElementById('surveyTemperature').addEventListener('input', function() {
         document.getElementById('surveyTemperatureValue').textContent = this.value;
     });
-    // Initialize model select dropdowns with specific options for each section
-    const personaModelSelect = document.getElementById('modelSelect');
-    const surveyModelSelect = document.getElementById('surveyModelSelect');
+    document.getElementById('configureProviderBtn').addEventListener('click', configureLLMProvider);
     
-    // Set options for persona generation (all models)
-    personaModelSelect.innerHTML = document.getElementById('modelOptionsTemplate').innerHTML;
-    
-    // Set options for survey (only GPT and Gemini models)
-    const surveyModels = [
-        { value: 'openai/gpt-4.1-mini', label: 'GPT-4.1-mini' },
-        { value: 'openai/gpt-4.1-nano', label: 'GPT-4.1-nano' },
-        { value: 'google/gemini-2.0-flash-001', label: 'Gemini Flash 2.0' }
-    ];
-    
-    surveyModelSelect.innerHTML = surveyModels
-        .map(model => `<option value="${model.value}">${model.label}</option>`)
-        .join('');
-        
     // Button event listeners
-    document.getElementById('generateCodeBtn').addEventListener('click', async function() {
-        await generatePersonaCode();
-        document.getElementById('generatedCodeSection').style.display = 'block';
-        // Scroll to generated code section
-        document.getElementById('generatedCodeSection').scrollIntoView({ behavior: 'smooth' });
-    });
-    document.getElementById('executeCodeBtn').addEventListener('click', async function() {
-        await executePersonaCode();
-        document.getElementById('personasSection').style.display = 'block';
-        // Scroll to personas section
-        document.getElementById('personasSection').scrollIntoView({ behavior: 'smooth' });
-    });
+    document.getElementById('generateCodeBtn').addEventListener('click', generatePersonaCode);
+    document.getElementById('executeCodeBtn').addEventListener('click', executePersonaCode);
     document.getElementById('downloadPersonasBtn').addEventListener('click', () => {
-    downloadCsv(personas, 'shell_synthetic_personas.csv', "No personas to download");});
-    document.getElementById('nextToSurveyBtn').addEventListener('click', () => {
-        document.querySelector('#mainTabs button[data-bs-target="#survey"]').click();
+        downloadCsv(personas, 'shell_synthetic_personas.csv', "No personas to download");
     });
     
     document.getElementById('runSurveyBtn').addEventListener('click', runSurvey);
-    document.getElementById('downloadSurveyBtn').addEventListener('click', downloadSurveyJson);
     document.getElementById('downloadSurveyCsvBtn').addEventListener('click', () => {
-    downloadCsv(surveyResults, 'shell_survey_results.csv', "No survey results to download");});
-    document.getElementById('nextToResultsBtn').addEventListener('click', () => {
-        document.querySelector('#mainTabs button[data-bs-target="#results"]').click();
-        renderCharts();
+        downloadCsv(surveyResults, 'shell_survey_results.csv', "No survey results to download");
     });
     
-    document.getElementById('resetFiltersBtn').addEventListener('click', resetFilters);
     document.getElementById('downloadResultsBtn').addEventListener('click', () => {
-    downloadCsv(surveyResults, 'shell_complete_survey_results.csv', "No results to download");});
+        downloadCsv(surveyResults, 'shell_complete_survey_results.csv', "No results to download");
+    });
+    document.getElementById('resetFiltersBtn').addEventListener('click', resetFilters);
 });
 // STEP 1: Generate Persona Code
 async function generatePersonaCode() {
     try {
-        const apiKey = document.getElementById('apiKeyInput').value;
-        if (!apiKey) {
-            showError("Please enter your OpenRouter API key");
+        if (!llmConfig || !llmConfig.baseURL || !llmConfig.apiKey) {
+            showError("Please configure your API provider first");
             return;
         }
         
@@ -111,9 +208,9 @@ async function generatePersonaCode() {
         const temperature = parseFloat(document.getElementById('personaTemperature').value);
         const model = document.getElementById('modelSelect').value;
         
-        
         // Show progress indicator
         const progressBar = document.getElementById('generationProgress');
+        progressBar.style.display = 'flex';
         progressBar.classList.remove('d-none');
         const progressBarInner = progressBar.querySelector('.progress-bar');
         progressBarInner.style.width = '50%';
@@ -121,7 +218,7 @@ async function generatePersonaCode() {
         
         // Prepare prompt for the LLM
         const prompt = `
-        Write a JavaScript code to  generate REALISTIC fake data of ${numPersonas} rows of persona based on the following profile and fields provided
+        Write a JavaScript code to generate REALISTIC fake data of ${numPersonas} rows of persona based on the following profile and fields provided
         When listing possible values for fields, go beyond the examples above to be FULLY comprehensive.
         When picking values, use realistic distributions for each value based on real-life.
         <PROFILE>
@@ -141,31 +238,10 @@ async function generatePersonaCode() {
         DO NOT include any explanation text outside the JavaScript code itself.
         `;
         
-        // Call the API
-        const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiKey}`,
-                'HTTP-Referer': window.location.href,
-                'X-Title': 'Shell Synthetic Persona Survey'
-            },
-            body: JSON.stringify({
-                model: model,
-                temperature: temperature,
-                messages: [
-                    { role: "user", content: prompt }
-                ]
-            })
-        });
-        
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(`API Error: ${errorData.error?.message || response.statusText}`);
-        }
-        
-        const data = await response.json();
-        const content = data.choices[0].message.content;
+        // Call the API using the configured provider
+        const content = await makeAPICall([
+            { role: "user", content: prompt }
+        ], model, temperature);
         
         // Extract code from response
         let code = content;
@@ -186,13 +262,16 @@ async function generatePersonaCode() {
         // Update progress
         progressBarInner.style.width = '100%';
         progressBarInner.textContent = 'Code generated';
-        // Hide the progress bar after a short delay (optional)
         setTimeout(() => {
             progressBar.style.display = 'none';
-        }, 1000); // hides after 1 second, adjust as needed
+        }, 1000);
         
         // Enable execute button
         document.getElementById('executeCodeBtn').disabled = false;
+        
+        // Show the generated code section
+        document.getElementById('generatedCodeSection').style.display = 'block';
+        document.getElementById('generatedCodeSection').scrollIntoView({ behavior: 'smooth' });
         
     } catch (error) {
         console.error("Error generating code:", error);
@@ -205,6 +284,7 @@ function executePersonaCode() {
     try {
         // Show progress
         const progressBar = document.getElementById('generationProgress1');
+        progressBar.style.display = 'flex';
         progressBar.classList.remove('d-none');
         const progressBarInner = progressBar.querySelector('.progress-bar');
         progressBarInner.style.width = '50%';
@@ -240,17 +320,21 @@ function executePersonaCode() {
         // Update progress
         progressBarInner.style.width = '100%';
         progressBarInner.textContent = `${personas.length} personas generated`;
-        // Hide the progress bar after a short delay (optional)
         setTimeout(() => {
             progressBar.style.display = 'none';
-        }, 1000); // hides after 1 second, adjust as needed
+        }, 1000);
         
         // Display personas in the table
         displayPersonas();
         
-        // Enable next steps
+        // After successful execution
         document.getElementById('downloadPersonasBtn').disabled = false;
-        document.getElementById('nextToSurveyBtn').disabled = false;
+        document.getElementById('personasSection').style.display = 'block';
+        document.getElementById('personasSection').scrollIntoView({ behavior: 'smooth' });
+        
+        // Show and enable survey section
+        const surveySection = document.getElementById('surveySection');
+        surveySection.style.display = 'block';
         document.getElementById('runSurveyBtn').disabled = false;
         
     } catch (error) {
@@ -339,62 +423,29 @@ function downloadCsv(data, filename, errorMessage) {
 function parseQuestions() {
     const questionsText = document.getElementById('surveyQuestions').value;
     const questionLines = questionsText.split('\n').filter(line => line.trim() !== '');
+    const surveyQuestions = [];
+    const surveyOptions = [];
     
-    // Clear previous values from global variables
-    surveyQuestions = [];
-    surveyOptions = [];
-    questionLines.forEach(line => {
-        let question = line.trim();
+    for (let i = 0; i < questionLines.length; i++) {
+        let question = questionLines[i].trim();
         let options = [];
-        // Check for options in parentheses with or without italics: _(Options)_ or (Options)
-        const parenthesesMatch = line.match(/[\(_]([^)]+)[\)_]/);
-        if (parenthesesMatch) {
-            // Extract options from parentheses
-            const optionsText = parenthesesMatch[1].trim();
-            options = optionsText.split(/\s*\/\s*|\s*,\s*/).map(opt => opt.trim()).filter(opt => opt);
-            
-            // Remove the options part from the question
-            question = line.replace(/\s*[\(_]([^)]+)[\)_]\s*/, '').trim();
-        } 
-        // Check for question mark format
-        else if (line.includes('?')) {
-            const parts = line.split('?');
-            question = parts[0].trim() + '?';
-            
-            // If there's content after the question mark, try to parse options
-            if (parts.length >= 2) {
-                const optionsText = parts.slice(1).join('?').trim();
-                if (optionsText) {
-                    options = optionsText.split(/\s*\/\s*|\s*,\s*/).map(opt => opt.trim()).filter(opt => opt);
-                }
-            }
+        let nextLine = questionLines[i+1] && questionLines[i+1].trim();
+        let optionsMatched = false;
+        
+        question = question.replace(/\s+\?$/, '?');
+        
+        if (nextLine && /^\(.+\)$/.test(nextLine) && !/e\.g\./i.test(nextLine)) {
+            const optionsText = nextLine.slice(1, -1).trim();
+            options = optionsText.split(/\s*\/\s*/).map(opt => opt.trim()).filter(Boolean);
+            optionsMatched = true;
         }
-        // Check for colon format
-        else if (line.includes(':')) {
-            const colonParts = line.split(':');
-            question = colonParts[0].trim();
-            
-            const optionsText = colonParts.slice(1).join(':').trim();
-            if (optionsText) {
-                options = optionsText.split(/\s*\/\s*|\s*,\s*/).map(opt => opt.trim()).filter(opt => opt);
-            }
-        }
-        // Check for scale format (e.g., "1-5 scale" or "1–5 scale")
-        const scaleMatch = line.match(/\(?\s*(\d+[\-–]\d+)\s+scale\s*\)?/i);
-        if (scaleMatch) {
-            const scaleParts = scaleMatch[1].split(/[\-–]/);
-            const min = parseInt(scaleParts[0]);
-            const max = parseInt(scaleParts[1]);
-            
-            // Generate options for the scale
-            options = Array.from({length: max - min + 1}, (_, i) => (i + min).toString());
-            
-            // Clean up the question by removing the scale part
-            question = line.replace(/\s*\(?\s*\d+[\-–]\d+\s+scale\s*\)?\s*/i, '').trim();
-        }
+        
         surveyQuestions.push(question);
         surveyOptions.push(options);
-    });
+        
+        if (optionsMatched) i++; 
+    }
+    
     return { surveyQuestions, surveyOptions };
 }
 function generateJsonSchema() {
@@ -440,66 +491,15 @@ function generateJsonSchema() {
     
     return schema;
 }
-async function runSurvey() {
+// Process a batch of participants
+async function processBatch(participants, batchIndex, model, temperature, schema) {
     try {
-        if (personas.length === 0) {
-            showError("Please generate personas first");
-            return;
-        }
+        const batchResults = [];
         
-        const apiKey = document.getElementById('apiKeyInput').value;
-        if (!apiKey) {
-            showError("Please enter your OpenRouter API key");
-            return;
-        }
-        
-        // Parse survey questions and generate schema
-        const { surveyQuestions: questions, surveyOptions: options } = parseQuestions();
-        surveyQuestions = questions; // Update global variable
-        surveyOptions = options; // Update global variable
-        
-        const schema = generateJsonSchema();
-        if (!schema) return;
-        
-        const numParticipants = Math.min(
-            parseInt(document.getElementById('surveyParticipants').value),
-            personas.length
-        );
-        const temperature = parseFloat(document.getElementById('surveyTemperature').value);
-        const model = document.getElementById('surveyModelSelect').value;
-        
-        // Select random participants without duplicates
-        const selectedIndices = selectRandomIndices(personas.length, numParticipants);
-        const participants = selectedIndices.map(index => personas[index]);
-        
-        // Show progress
-        const progressBar = document.getElementById('surveyProgress');
-        progressBar.classList.remove('d-none');
-        const progressBarInner = progressBar.querySelector('.progress-bar');
-        progressBarInner.style.width = '0%';
-        progressBarInner.textContent = 'Starting survey...';
-        
-        // Disable the run button during survey
-        document.getElementById('runSurveyBtn').disabled = true;
-        
-        // Clear previous results
-        surveyResults = [];
-        document.getElementById('surveyResultsPreview').innerHTML = '';
-        document.getElementById('responseCount').textContent = '0';
-        
-        // Process each participant
+        // Process each participant in this batch
         for (let i = 0; i < participants.length; i++) {
             const persona = participants[i];
-            
-            // Update progress
-            const progress = Math.round(((i + 1) / participants.length) * 100);
-            progressBarInner.style.width = `${progress}%`;
-            progressBarInner.textContent = `Processed ${i + 1} of ${participants.length} (${progress}%)`;
-            if(i==participants.length-1){
-                setTimeout(() => {
-                        progressBar.style.display = 'none';
-                }, 1000); // hides after 1 second, adjust as needed
-            }
+            const participantIndex = batchIndex * participants.length + i;
             
             // Create a system prompt describing the persona
             const personaDescription = Object.entries(persona)
@@ -520,40 +520,19 @@ IMPORTANT: Your profile should strongly influence your choices. Different person
             
             // Build structured response format
             const responseFormat = {
-            type: "json_schema",
-            json_schema: {
-                name: "surveyResponse",
-                strict: true,
-                schema: schema
-            }
+                type: "json_schema",
+                json_schema: {
+                    name: "surveyResponse",
+                    strict: true,
+                    schema: schema
+                }
             };
-            // Call the API
-            const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKey}`,
-                    'HTTP-Referer': window.location.href,
-                    'X-Title': 'Shell Synthetic Persona Survey'
-                },
-                body: JSON.stringify({
-                    model: model,
-                    temperature: temperature,
-                    messages: [
-                        { role: "system", content: systemPrompt },
-                        { role: "user", content: `Please answer the following survey questions by choosing one of the options(enum). For each answer, provide a detailed reasoning explaining WHY you selected that option based on your persona's characteristics. you must respond with valid JSON only, that must use double quotes for all keys and string values, include commas between all key-value pairs, contain no trailing commas with no extra text or markdown outside the JSON object, it must have same keys that is defined in the schema, include all required fields.\n\n Questions:\n${questionsPrompt}` }
-                    ],
-                    response_format: responseFormat
-                })
-            });
             
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(`API Error for participant ${i+1}: ${errorData.error?.message || response.statusText}`);
-            }
-            
-            const data = await response.json();
-            const content = data.choices[0].message.content;
+            // Call the API using the configured provider
+            const content = await makeAPICall([
+                { role: "system", content: systemPrompt },
+                { role: "user", content: `Please answer the following survey questions by choosing one of the options(enum). For each answer, provide a detailed reasoning explaining WHY you selected that option based on your persona's characteristics. you must respond with valid JSON only, that must use double quotes for all keys and string values, include commas between all key-value pairs, contain no trailing commas with no extra text or markdown outside the JSON object, it must have same keys that is defined in the schema, include all required fields.\n\n Questions:\n${questionsPrompt}` }
+            ], model, temperature, responseFormat);
             
             // Parse the JSON response
             let answerData;
@@ -565,52 +544,207 @@ IMPORTANT: Your profile should strongly influence your choices. Different person
                 if (jsonMatch) {
                     answerData = JSON.parse(jsonMatch[0]);
                 } else {
-                    console.warn(`Could not parse JSON for participant ${i+1}. Skipping.`);
+                    console.warn(`Could not parse JSON for participant ${participantIndex+1}. Skipping.`);
                     continue;
                 }
             }
             
             // Combine persona data with survey responses
             const result = {
-                participant_id: i + 1,
+                participant_id: participantIndex + 1,
                 ...persona,
                 ...answerData
             };
             
-            surveyResults.push(result);
+            batchResults.push(result);
+        }
+        
+        return batchResults;
+    } catch (error) {
+        console.error(`Error processing batch ${batchIndex + 1}:`, error);
+        throw error;
+    }
+}
+// Modified runSurvey function
+async function runSurvey() {
+    try {
+        if (personas.length === 0) {
+            showError("Please generate personas first");
+            return;
+        }
+        
+        if (!llmConfig || !llmConfig.baseURL || !llmConfig.apiKey) {
+            showError("Please configure your API provider first");
+            return;
+        }
+        
+        // Parse survey questions and generate schema
+        const { surveyQuestions: questions, surveyOptions: options } = parseQuestions();
+        surveyQuestions = questions;
+        surveyOptions = options;
+        
+        const schema = generateJsonSchema();
+        if (!schema) return;
+        
+        const numParticipants = Math.min(
+            parseInt(document.getElementById('surveyParticipants').value),
+            personas.length
+        );
+        const temperature = parseFloat(document.getElementById('surveyTemperature').value);
+        const model = document.getElementById('surveyModelSelect').value;
+        
+        // Select random participants without duplicates
+        const selectedIndices = selectRandomIndices(personas.length, numParticipants);
+        const participants = selectedIndices.map(index => personas[index]);
+        
+        // Show progress bar
+        const progressBar = document.getElementById('surveyProgress');
+        progressBar.classList.remove('d-none');
+        progressBar.style.display = 'block';
+        
+        const progressBarInner = progressBar.querySelector('.progress-bar');
+        progressBarInner.style.width = '5%';
+        progressBarInner.textContent = 'Starting survey...';
+        
+        // Force a layout recalculation to ensure the progress bar appears
+        void progressBar.offsetHeight;
+        
+        // Disable the run button during survey
+        document.getElementById('runSurveyBtn').disabled = true;
+        
+        // Clear previous results
+        surveyResults = [];
+        document.getElementById('surveyResultsPreview').innerHTML = '';
+        document.getElementById('responseCount').textContent = '0';
+        
+        // Divide participants into batches (5 batches)
+        const BATCH_COUNT = 5;
+        const batchSize = Math.ceil(participants.length / BATCH_COUNT);
+        const batches = [];
+        
+        for (let i = 0; i < BATCH_COUNT; i++) {
+            const start = i * batchSize;
+            const end = Math.min(start + batchSize, participants.length);
+            if (start < participants.length) {
+                batches.push(participants.slice(start, end));
+            }
+        }
+        
+        console.log(`Processing ${participants.length} participants in ${batches.length} batches of approximately ${batchSize} each`);
+        
+        // Process all batches in parallel
+        const batchPromises = batches.map((batch, index) => 
+            processBatch(batch, index, model, temperature, schema)
+        );
+        
+        // Create a progress updater
+        let completedParticipants = 0;
+        const totalParticipants = participants.length;
+        
+        // Improved progress tracking
+        progressBarInner.style.width = '10%';
+        progressBarInner.textContent = `Waiting for first responses...`;
+        document.getElementById('responseCount').textContent = '0';
+        
+        // Update progress as batches complete
+        const progressUpdater = setInterval(() => {
+            if (completedParticipants === 0) {
+                const simulatedProgress = Math.min(30, parseInt(progressBarInner.style.width) + 1);
+                progressBarInner.style.width = `${simulatedProgress}%`;
+                progressBarInner.textContent = `Processing requests...`;
+            } else {
+                const progress = Math.round((completedParticipants / totalParticipants) * 100);
+                progressBarInner.style.width = `${progress}%`;
+                progressBarInner.textContent = `Processed ${completedParticipants} of ${totalParticipants} (${progress}%)`;
+                document.getElementById('responseCount').textContent = completedParticipants.toString();
+            }
+        }, 200);
+        
+        // Track batch completion
+        const processedResults = [];
+        for (let i = 0; i < batches.length; i++) {
+            try {
+                const batchResult = await batchPromises[i];
+                processedResults.push(...batchResult);
+                completedParticipants += batchResult.length;
+                
+                // Update progress with actual values
+                const progress = Math.round((completedParticipants / totalParticipants) * 100);
+                progressBarInner.style.width = `${progress}%`;
+                progressBarInner.textContent = `Processed ${completedParticipants} of ${totalParticipants} (${progress}%)`;
+                document.getElementById('responseCount').textContent = completedParticipants.toString();
+                
+                console.log(`Completed batch ${i+1}/${batches.length} with ${batchResult.length} results`);
+            } catch (error) {
+                console.error(`Error in batch ${i+1}:`, error);
+            }
+        }
+        
+        clearInterval(progressUpdater);
+        
+        // Combine and sort results by participant_id
+        surveyResults = processedResults.sort((a, b) => a.participant_id - b.participant_id);
+        
+        // Update the UI with results
+        completedParticipants = surveyResults.length;
+        progressBarInner.style.width = '100%';
+        progressBarInner.textContent = `Processed ${completedParticipants} of ${totalParticipants} (100%)`;
+        document.getElementById('responseCount').textContent = completedParticipants.toString();
+        
+        // Display results in the preview
+        const resultsPreview = document.getElementById('surveyResultsPreview');
+        resultsPreview.innerHTML = '';
+        
+        surveyResults.forEach((result, index) => {
+            // Extract just the answer portion for display
+            const answerData = {};
+            Object.keys(result).forEach(key => {
+                if (key.startsWith('question_') && !key.includes('_reasoning')) {
+                    answerData[key] = result[key];
+                }
+            });
             
-            // Update response count
-            document.getElementById('responseCount').textContent = surveyResults.length.toString();
-            
-            const resultsPreview = document.getElementById('surveyResultsPreview');
             const resultDiv = document.createElement('div');
             resultDiv.className = 'card mb-2';
             resultDiv.innerHTML = `
                 <div class="card-header bg-light">
-                    Participant ${i + 1}
+                    Participant ${result.participant_id}
                 </div>
                 <div class="card-body">
                     <pre style="font-size: 12px;">${JSON.stringify(answerData, null, 2)}</pre>
                 </div>
             `;
             resultsPreview.appendChild(resultDiv);
-        }
+        });
+        
+        // Hide progress bar after completion
+        setTimeout(() => {
+            progressBar.style.display = 'none';
+        }, 1000);
         
         // Re-enable the run button
         document.getElementById('runSurveyBtn').disabled = false;
         
-        // Enable next steps
-        document.getElementById('downloadSurveyBtn').disabled = false;
+        // Enable download buttons
         document.getElementById('downloadSurveyCsvBtn').disabled = false;
-        document.getElementById('nextToResultsBtn').disabled = false;
+        
+        // Show and scroll to results section
+        const resultsSection = document.getElementById('resultsSection');
+        resultsSection.style.display = 'block';
+        resultsSection.scrollIntoView({ behavior: 'smooth' });
         document.getElementById('downloadResultsBtn').disabled = false;
+        
+        // Render charts
+        renderCharts();
         
     } catch (error) {
         console.error("Error running survey:", error);
         showError(`Error running survey: ${error.message}`);
         document.getElementById('runSurveyBtn').disabled = false;
+        
+        // Make sure to hide the progress bar on error
         const progressBar = document.getElementById('surveyProgress');
-        progressBar.classList.add('d-none');
+        progressBar.style.display = 'none';
     }
 }
 function selectRandomIndices(max, count) {
@@ -625,24 +759,6 @@ function selectRandomIndices(max, count) {
     
     // Take the first 'count' elements
     return indices.slice(0, count);
-}
-function downloadSurveyJson() {
-    if (surveyResults.length === 0) {
-        showError("No survey results to download");
-        return;
-    }
-    
-    // Create and trigger download
-    const jsonContent = JSON.stringify(surveyResults, null, 2);
-    const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'shell_survey_results.json');
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
 }
 // STEP 3: Results Analysis and Visualization
 function renderCharts() {
@@ -769,7 +885,6 @@ function renderCharts() {
     generateFilters();
     populateResultsTable();
 }
-
 function generateFilters() {
     if (surveyResults.length === 0) return;
     
@@ -826,7 +941,6 @@ function generateFilters() {
         filterControls.appendChild(filterCol);
     });
 }
-
 function applyFilters() {
     // Get all filter controls
     const filterControls = document.querySelectorAll('.filter-control');
@@ -855,7 +969,6 @@ function applyFilters() {
     // Update table with filtered data
     populateResultsTable(filteredResults);
 }
-
 function updateCharts(filteredResults) {
     if (!filteredResults || filteredResults.length === 0) {
         showError("No results match the selected filters");
@@ -965,3 +1078,193 @@ function showError(message) {
     document.getElementById('errorModalBody').textContent = message;
     errorModal.show();
 }
+// Function to load demo data
+async function loadDemoData(demoFile) {
+    try {
+        const segmentKey = demoFile.split('/').pop().replace('.json', '');
+        console.log("segmentKey", segmentKey);
+        loadSegmentData("segments.json", segmentKey);
+        // Show loading indicator
+        document.getElementById('demoLoadingSpinner').classList.remove('d-none');
+        
+        // Fetch the demo data file
+        const response = await fetch(demoFile);
+        if (!response.ok) {
+            throw new Error(`Failed to load demo file: ${response.statusText}`);
+        }
+        
+        const demoData = await response.json();
+        
+        // Populate form fields with demo data
+        document.getElementById('segmentPrompt').value = demoData.segmentPrompt || '';
+        document.getElementById('fieldsList').value = demoData.fieldsList || '';
+        document.getElementById('surveyQuestions').value = demoData.surveyQuestionsText || '';
+        
+        // Set slider values if they exist
+        if (demoData.configSettings) {
+            if (demoData.configSettings.numPersonas) {
+                document.getElementById('numPersonas').value = demoData.configSettings.numPersonas;
+                document.getElementById('numPersonasValue').textContent = demoData.configSettings.numPersonas;
+            }
+            if (demoData.configSettings.personaTemperature) {
+                document.getElementById('personaTemperature').value = demoData.configSettings.personaTemperature;
+                document.getElementById('personaTemperatureValue').textContent = demoData.configSettings.personaTemperature;
+            }
+            if (demoData.configSettings.surveyParticipants) {
+                document.getElementById('surveyParticipants').value = demoData.configSettings.surveyParticipants;
+                document.getElementById('surveyParticipantsValue').textContent = demoData.configSettings.surveyParticipants;
+            }
+            if (demoData.configSettings.surveyTemperature) {
+                document.getElementById('surveyTemperature').value = demoData.configSettings.surveyTemperature;
+                document.getElementById('surveyTemperatureValue').textContent = demoData.configSettings.surveyTemperature;
+            }
+            
+            // Set model selections if they exist
+            if (demoData.configSettings.personaModel) {
+                const personaModelSelect = document.getElementById('modelSelect');
+                if (personaModelSelect.querySelector(`option[value="${demoData.configSettings.personaModel}"]`)) {
+                    personaModelSelect.value = demoData.configSettings.personaModel;
+                }
+            }
+            if (demoData.configSettings.surveyModel) {
+                const surveyModelSelect = document.getElementById('surveyModelSelect');
+                if (surveyModelSelect.querySelector(`option[value="${demoData.configSettings.surveyModel}"]`)) {
+                    surveyModelSelect.value = demoData.configSettings.surveyModel;
+                }
+            }
+        }
+        
+        // Set global variables
+        generatedCode = demoData.generatedCode || '';
+        personas = demoData.personas || [];
+        surveyResults = demoData.surveyResults || [];
+        surveyQuestions = demoData.surveyQuestions || [];
+        surveyOptions = demoData.surveyOptions || [];
+        
+        // Display the generated code if available
+        if (generatedCode) {
+            document.getElementById('generatedCode').textContent = generatedCode;
+            document.getElementById('generatedCodeSection').style.display = 'block';
+            document.getElementById('executeCodeBtn').disabled = false;
+        }
+        
+        // Display personas if available
+        if (personas.length > 0) {
+            displayPersonas();
+            document.getElementById('personasSection').style.display = 'block';
+            document.getElementById('downloadPersonasBtn').disabled = false;
+            
+            // Show survey section
+            document.getElementById('surveySection').style.display = 'block';
+            document.getElementById('runSurveyBtn').disabled = false;
+        }
+        
+        // Display survey results if available
+        if (surveyResults.length > 0) {
+            // Show survey section
+            document.getElementById('surveySection').style.display = 'block';
+            
+            // Generate JSON schema
+            generateJsonSchema();
+            
+            // Display results in the preview
+            const resultsPreview = document.getElementById('surveyResultsPreview');
+            resultsPreview.innerHTML = '';
+            
+            surveyResults.forEach((result) => {
+                // Extract just the answer portion for display
+                const answerData = {};
+                Object.keys(result).forEach(key => {
+                    if (key.startsWith('question_') && !key.includes('_reasoning')) {
+                        answerData[key] = result[key];
+                    }
+                });
+                
+                const resultDiv = document.createElement('div');
+                resultDiv.className = 'card mb-2';
+                resultDiv.innerHTML = `
+                    <div class="card-header bg-light">
+                        Participant ${result.participant_id}
+                    </div>
+                    <div class="card-body">
+                        <pre style="font-size: 12px;">${JSON.stringify(answerData, null, 2)}</pre>
+                    </div>
+                `;
+                resultsPreview.appendChild(resultDiv);
+            });
+            
+            document.getElementById('responseCount').textContent = surveyResults.length.toString();
+            document.getElementById('downloadSurveyCsvBtn').disabled = false;
+            
+            // Show results section
+            document.getElementById('resultsSection').style.display = 'block';
+            document.getElementById('downloadResultsBtn').disabled = false;
+            
+            // Render charts
+            renderCharts();
+        }
+        
+        // Scroll to the top of the page
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        
+        console.log('Demo data loaded successfully');
+        
+    } catch (error) {
+        console.error('Error loading demo data:', error);
+        showError(`Error loading demo: ${error.message}`);
+    } finally {
+        // Hide loading indicator
+        document.getElementById('demoLoadingSpinner').classList.add('d-none');
+    }
+}
+// Function to initialize demo cards
+function initializeDemoCards() {
+    const demosContainer = document.getElementById('demos');
+    if (!demosContainer) return;
+    
+    fetch('demos/demoFiles.json')
+      .then(response => response.json())
+      .then(demoFiles => {
+        demoFiles.forEach(demo => {
+          const demoCard = document.createElement('div');
+          demoCard.className = 'col mb-4';
+          demoCard.innerHTML = `
+            <div class="card h-100 demo-card" role="button" style="cursor: pointer;" data-file="${demo.file}">
+              <div class="card-body text-center">
+                <i class="${demo.icon} fs-1 mb-3 text-primary"></i>
+                <h5 class="card-title">${demo.title}</h5>
+              </div>
+            </div>
+          `;
+          demosContainer.appendChild(demoCard);
+        });
+      });
+    
+    document.addEventListener('click', function (e) {
+        const card = e.target.closest('.demo-card');
+        if (!card) return;
+        const demoFile = card.getAttribute('data-file');
+        if (demoFile) {
+            loadDemoData(demoFile);
+        }
+    });
+}
+// Initialize demos when DOM is loaded  
+document.addEventListener('DOMContentLoaded', function() {
+    initializeDemoCards();
+    
+    // Add a button to toggle demos visibility
+    const demoToggleBtn = document.getElementById('demoToggleBtn');
+    if (demoToggleBtn) {
+        demoToggleBtn.addEventListener('click', () => {
+            const demosSection = document.getElementById('demosSection');
+            if (demosSection.style.display === 'none') {
+                demosSection.style.display = 'block';
+                demoToggleBtn.innerHTML = '<i class="bi bi-chevron-up me-1"></i>Hide Demos';
+            } else {
+                demosSection.style.display = 'none';
+                demoToggleBtn.innerHTML = '<i class="bi bi-chevron-down me-1"></i>Show Demos';
+            }
+        });
+    }
+});

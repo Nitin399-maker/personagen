@@ -1,0 +1,14 @@
+[
+  {
+    "id": "value-seekers",
+    "title": "Shell Synthetic Persona Survey ",
+    "icon": "bi-fuel-pump-fill",
+    "file": "demos/shell.json"
+  },
+  {
+    "id": "brand-loyal",
+    "title": "Mars Petcare - Willingness to Pay Survey",
+    "icon": "bi bi-yin-yang",
+    "file": "demos/petcare.json"
+  }
+]
