@@ -46,9 +46,11 @@ function updateProviderStatus() {
 function updateModelOptions() {
     const personaModelSelect = document.getElementById('modelSelect');
     const surveyModelSelect = document.getElementById('surveyModelSelect');
+
     if (llmConfig && llmConfig.models && Array.isArray(llmConfig.models) && llmConfig.models.length > 0) {
         personaModelSelect.innerHTML = '';
         surveyModelSelect.innerHTML = '';
+
         const modelsList = llmConfig.models.map(model => {
             if (typeof model === 'string') {
                 return { id: model, name: model };
@@ -61,33 +63,35 @@ function updateModelOptions() {
                 console.warn('Unknown model format:', model);
                 return { id: String(model), name: String(model) };
             }
-        }).filter(model => model.id); // Filter out models without valid IDs
-        
+        }).filter(model => model.id);
+
         console.log('Processed models list:', modelsList);
+
+        // Fill personaModelSelect with all models
         modelsList.forEach(model => {
             const option = document.createElement('option');
             option.value = model.id;
             option.textContent = model.name;
             personaModelSelect.appendChild(option);
         });
-        const preferredSurveyModels = ['gpt-4o-mini', 'gpt-4o', 'gpt-4-turbo', 'claude-3-5-sonnet', 'gemini-2.0-flash'];
-        const availableSurveyModels = modelsList.filter(model => {
-            const modelId = (model.id || '').toLowerCase();
-            return preferredSurveyModels.some(preferred => 
-                modelId.includes(preferred.toLowerCase())
-            ) || modelId.includes('gpt') || modelId.includes('claude') || modelId.includes('gemini');
-        });
-        
-        const modelsToUse = availableSurveyModels.length > 0 ? availableSurveyModels : modelsList;
+
+        // Only include specific survey models (exact match)
+        const preferredSurveyModels = ['gpt-4.1-mini', 'gpt-4.1-nano', 'gpt-4o-mini'];
+        const modelsToUse = modelsList.filter(model =>
+            preferredSurveyModels.includes(model.id)
+        );
+
         modelsToUse.forEach(model => {
             const option = document.createElement('option');
             option.value = model.id;
             option.textContent = model.name;
             surveyModelSelect.appendChild(option);
         });
+
         console.log(`Loaded ${modelsList.length} models for persona generation, ${modelsToUse.length} for surveys`);
     }
 }
+
 // Initialize LLM configuration on page load
 async function initializeLLMConfig() {
     try {
