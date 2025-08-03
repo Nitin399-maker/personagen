@@ -130,7 +130,7 @@ updateModelOptions() {
     const { llmConfig } = state;
     const selects = [elements.personaModelSelect, elements.surveyModelSelect];
     if (!llmConfig?.models?.length) return;
-    const preferredIds = ['openai/gpt-4.1-mini', 'openai/gpt-4.1-nano', 'openai/o4-mini'];
+    const PREFERRED_MODELS = ['gpt-4.1-mini', 'gpt-4.1-nano', 'o4-mini'];
     const modelsList = llmConfig.models.map(model => {
         if (typeof model === 'string') return { id: model, name: model };
         if (typeof model === 'object' && model) {
@@ -141,9 +141,9 @@ updateModelOptions() {
         }
         return { id: String(model), name: String(model) };
     }).filter(model => model.id);
-    console.log('Preferred:', preferredIds);
+    console.log('Preferred:', PREFERRED_MODELS);
     console.log('All model IDs:', modelsList.map(m => m.id));
-    const filteredModels = modelsList.filter(model => preferredIds.includes(model.id));
+    const filteredModels = modelsList.filter(model => PREFERRED_MODELS.includes(model.id));
     if (!filteredModels.length) {
         console.warn('❗ No preferred models found:', modelsList.map(m => m.id));
         return;
@@ -1026,9 +1026,20 @@ function initializeApp() {
     segments.loadSegmentData("segments.json", "shell");
     config.configureLLMProvider(false);
     questionModalInstance = new bootstrap.Modal(document.getElementById('questionModal'));
-    const initialQuestions = demo.parseDemoQuestions(`When choosing a fuel station, what matters most to you?\n(Price / Brand / Location / Loyalty Points)\nDo you prefer to receive fuel or service offers through:\n(App / SMS / Email / In-store Signage)\nWhen are you most likely to refuel your vehicle?\n(before 9 AM / 9 AM – 3 PM / after 3 PM / Only on weekends)\nIf Shell introduced a bundled service that includes fuel, a free oil check, and coffee, how appealing would that be to you?\n(I would use it regularly / I would try it once / depends on the price / I prefer simpler fuel-only options)`);
-    state.surveyQuestions = initialQuestions.surveyQuestions;
-    state.surveyOptions = initialQuestions.surveyOptions;
+(async () => {
+  try {
+    const response = await fetch('demos/shell.json');
+    const demoData = await response.json();
+    const { surveyQuestions, surveyOptions } = demo.parseDemoQuestions(demoData.surveyQuestionsText || '');
+    state.surveyQuestions = surveyQuestions;
+    state.surveyOptions = surveyOptions;
+    results.generateColorScales();
+    survey.renderDynamicQuestions();
+  } catch (error) {
+    console.error("Failed to load Shell demo questions:", error);
+  }
+})();
+
     results.generateColorScales();
     survey.renderDynamicQuestions();
     ['generatedCodeSection', 'personasSection', 'surveySectionWrapper', 'resultsSectionWrapper'].forEach(sectionId => {
