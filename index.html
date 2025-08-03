@@ -11,8 +11,14 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.css">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
+        :root { --sidebar-width: 260px; --sidebar-collapsed-width: 60px; }
+        body { position: relative; }
         .card-header{padding:.5rem 1rem}.card-body{padding:.75rem}pre{font-size:.8rem}.table{font-size:.875rem}
+        .segment-icon {width: 120px;height: 120px;object-fit: contain;vertical-align: middle;
+            margin-bottom: 4px;  border: 1px solid #dee2e6; border-radius: 0.5rem;      
+            }
         .form-control,.form-select{font-size:.875rem;padding:.25rem .5rem}
         [data-bs-theme="light"] .form-range::-webkit-slider-runnable-track{background-color:#dee2e6}
         [data-bs-theme="light"] .form-range::-moz-range-track{background-color:#dee2e6}
@@ -23,351 +29,262 @@
         [data-bs-theme="dark"] .card{background-color:#343a40}
         [data-bs-theme="dark"] .text-dark{color:#f8f9fa!important}
         [data-bs-theme="dark"] .badge.bg-light{background-color:#6c757d!important;color:#fff!important}
-        .provider-status {
-            font-size: 0.75rem;
-            margin-top: 0.25rem;
-        }
+        .provider-status { font-size: 0.75rem; margin-top: 0.25rem; }
+        .segment-box { cursor: pointer; transition: all 0.2s ease; height: 100%; border: 2px solid transparent; }
+        .segment-box:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+        .segment-box.selected { border-color: #0d6efd; background-color: rgba(13, 110, 253, 0.05); }
+        .segment-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+        .demo-card { transition: all 0.2s ease; border: 2px solid transparent; }
+        .demo-card:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+        .demo-card.selected { border-color: #0d6efd; background-color: rgba(13, 110, 253, 0.05); }
+        .edit-btn { position: absolute; top: 10px; right: 10px; z-index: 10; }
+        .collapsible-toggle { cursor: pointer; }
+        .collapsible-toggle:hover { color: #0d6efd; }
+        .collapsible-toggle::after { display: inline-block; margin-left: 0.5rem; content: ""; width: 0.5em; height: 0.5em; border-style: solid; border-width: 0.15em 0.15em 0 0; transform: rotate(135deg); position: relative; top: -0.15em; transition: transform 0.3s; }
+        .collapsible-toggle.collapsed::after { transform: rotate(45deg); top: 0; }
+        .tooltip { position: absolute; max-width: 400px; background: rgba(0, 0, 0, 0.85); color: #fff; border-radius: 6px; padding: 12px 16px; font-size: 13px; pointer-events: none; z-index: 1000; box-shadow: 0 5px 15px rgba(0,0,0,0.3); overflow-y: auto; max-height: 300px; }
+        [data-bs-theme="dark"] .tooltip { background: rgba(255, 255, 255, 0.9); color: #212529; box-shadow: 0 5px 15px rgba(255,255,255,0.2); }
+        [data-bs-theme="light"] #sidebar { background-color: #f8f9fa; color: #212529; box-shadow: 2px 0 5px rgba(0,0,0,0.1); border-right: 1px solid #dee2e6; }
+        [data-bs-theme="light"] #sidebar .nav-link .nav-icon { color: #212529; }
+        [data-bs-theme="light"] #sidebar-toggle { color: #212529; }
+        #sidebar { position: fixed; top: 0; left: 0; height: 100vh; width: var(--sidebar-collapsed-width); background-color: var(--bs-dark); z-index: 1030; transition: width 0.3s ease; overflow: hidden; }
+        #sidebar.expanded { width: var(--sidebar-width); }
+        #main-content { margin-left: var(--sidebar-collapsed-width); transition: margin-left 0.3s ease; }
+        #sidebar.expanded + #main-content { margin-left: var(--sidebar-width); }
+        #sidebar .nav-link { color: rgba(255,255,255,0.7); border-radius: 0.375rem; margin: 0.25rem 0; white-space: nowrap; }
+        #sidebar .nav-link .nav-icon { font-size: 1.25rem; width: 24px; text-align: center; }
+        #sidebar .nav-link .nav-text { margin-left: 1rem; opacity: 0; transition: opacity 0.2s ease; }
+        #sidebar.expanded .nav-link .nav-text { opacity: 1; }
+        #sidebar .nav-link:hover { background-color: rgba(255,255,255,0.1); color: #fff; }
+        #sidebar .nav-link.active { background-color: var(--bs-primary); color: #fff; font-weight: bold; }
+        #sidebar-toggle { color: rgba(255,255,255,0.7); }
+        #sidebar-toggle:hover { color: #fff; }
+        .question-card { border-left: 4px solid var(--bs-primary); }
+        .option-item .option-color-dot { width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; flex-shrink: 0; }
+        .response-matrix-table { width: 100%; border-collapse: separate; border-spacing: 4px; }
+        .response-matrix-table th { text-align: center; font-weight: bold; padding: 0.5rem; background-color: var(--bs-secondary-bg); }
+        .response-matrix-table td { text-align: center; vertical-align: middle; padding: 0.25rem; height: 36px; }
+        .response-dot { display: inline-block; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; transition: all 0.2s ease; border: 2px solid transparent; }
+        .response-dot:hover { transform: scale(1.2); border-color: var(--bs-primary); }
     </style>
 </head>
-<body>
-    <div class="container-fluid py-3">
-        <div class="row mb-3">
-            <div class="col-12 d-flex justify-content-end">
-                <div class="position-relative my-1" role="group" aria-label="Toggle dark mode" title="Toggle Dark Mode">
-                    <button class="dark-theme-toggle btn btn-outline-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="bi bi-circle-half"></i> <span class="d-lg-none ms-2">Toggle theme</span>
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end">
-                        <li><button class="dropdown-item" data-bs-theme-value="light"><i class="me-2 bi bi-sun-fill"></i> Light</button></li>
-                        <li><button class="dropdown-item" data-bs-theme-value="dark"><i class="me-2 bi bi-moon-stars-fill"></i> Dark</button></li>
-                        <li><button class="dropdown-item" data-bs-theme-value="auto"><i class="me-2 bi bi-circle-half"></i> Auto</button></li>
-                    </ul>
-                </div>
-            </div>
-            <div class="col-12 text-center">
-                <div class="card border-0 bg-gradient shadow-sm mb-3">
-                    <div class="card-body py-3">
-                        <h1 class="display-6 fw-bold text-primary">Synthetic Persona Survey Demo</h1>
-                        <p class="lead text-muted small">Generate synthetic personas, run surveys through LLMs, and analyze results</p>
-                    </div>
-                </div>
-            </div>
-            <!-- Demo Section -->
-<div id="demosSection" class="row mb-4">
-    <div class="col-12">
-        <div class="card shadow-sm">
-            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                <h3 class="fs-5 mb-0"><i class="bi bi-lightning-charge-fill me-2"></i>Quick Demos</h3>
-            </div>
-            <div class="card-body bg-body-tertiary">
-                <p class="small text-muted mb-3">
-                    Click on any demo card.
-                </p>
-                <div id="demoLoadingSpinner" class="text-center mb-3 d-none">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Loading demo...</span>
-                    </div>
-                    <p class="text-muted small mt-2">Loading demo data...</p>
-                </div>
-                <div class="container-fluid p-0">
-                    <div id="demos" class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4 g-3">
-                    </div>
-                </div>
-            </div>
+<body data-bs-spy="scroll" data-bs-target="#sidebar-nav" data-bs-offset="100">
+    <!-- NEW: Sidebar -->
+    <nav id="sidebar" class="d-flex flex-column p-2 shadow">
+        <div class="d-flex justify-content-center align-items-center my-2">
+            <a href="#" class="text-decoration-none">
+                <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PGNpcmNsZSBjeD0iMTYiIGN5PSIxNiIgcj0iMTUiIGZpbGw9IiMyNTYzZWIiLz48cGF0aCBmaWxsPSIjZmZmIiBkPSJtMTYgNyAyIDcgNyAyLTcgMi0yIDctMi03LTctMiA3LTJaIi8+PC9zdmc+" width="30" height="30" alt="Logo">
+            </a>
         </div>
-    </div>
-</div>
+        <hr class="text-secondary">
+        <ul id="sidebar-nav" class="nav nav-pills flex-column flex-grow-1">
+            <li class="nav-item"><a href="#personaGenerationSection" class="nav-link d-flex align-items-center"><i class="bi bi-people-fill nav-icon"></i><span class="nav-text">1. Generate Personas</span></a></li>
+            <li class="nav-item"><a href="#surveySectionWrapper" class="nav-link d-flex align-items-center"><i class="bi bi-clipboard2-data-fill nav-icon"></i><span class="nav-text">2. Run Survey</span></a></li>
+            <li class="nav-item"><a href="#resultsSectionWrapper" class="nav-link d-flex align-items-center"><i class="bi bi-bar-chart-fill nav-icon"></i><span class="nav-text">3. Analyze Results</span></a></li>
+        </ul>
+        <hr class="text-secondary">
+        <div class="text-center mb-2">
+            <button id="sidebar-toggle" class="btn btn-sm"><i class="bi bi-arrows-angle-expand"></i></button>
         </div>
-        
-        <!-- Remove the tab navigation and restructure content -->
-        <div class="container-fluid">
-            <!-- STEP 1: Generate Personas -->
-            <div class="row mb-4">
-                <div class="col-12">
-                    <div class="card shadow-sm">
-                        <div class="card-header bg-primary text-white">
-                            <h3 class="fs-5 mb-0"><i class="bi bi-people-fill me-2"></i>1. Generate Personas</h3>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-12">
-                                    <div class="card shadow-sm mb-3">
-                                        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                                            <h3 class="fs-6 mb-0"><i class="bi bi-gear-fill me-2"></i>Persona Profile Configuration</h3>
-                                            <select class="form-select form-select-sm ms-2" id="segmentSelect" style="width: 260px;">
-                                                <!-- options will be dynamically inserted by JS -->
-                                            </select>
-                                        </div>
-                                        <div class="card-body bg-body-tertiary">
-                                            <div class="mb-2">
-                                                <label for="segmentPrompt" class="form-label fw-semibold small">Segment Description</label>
-                                                <textarea class="form-control" id="segmentPrompt" rows="5"></textarea>
-                                            </div>
-                                            <div class="mb-2">
-                                                <label for="fieldsList" class="form-label fw-semibold small">Fields (one per line)</label>
-                                                <textarea class="form-control" id="fieldsList" rows="6"></textarea>
-                                            </div>
-                                            
-                                            <div class="row mb-2">
-                                                <div class="col-md-6">
-                                                    <label for="numPersonas" class="form-label fw-semibold small">Number of People: <span id="numPersonasValue" class="badge bg-primary">30</span></label>
-                                                    <input type="range" class="form-range" id="numPersonas" min="10" max="1000" value="30">
-                                                </div>
-                                                <div class="col-md-6" style="display: none;">
-                                                    <label for="personaTemperature" class="form-label fw-semibold small">Temperature: <span id="personaTemperatureValue" class="badge bg-primary">1</span></label>
-                                                    <input type="range" class="form-range" id="personaTemperature" min="0.1" max="1" step="0.1" value="1">
-                                                </div>
-                                            </div>
-                                            
-                                            <div class="row mb-2">
-                                                <div class="col-md-6">
-                                                    <label for="modelSelect" class="form-label fw-semibold small">Model</label>
-                                                    <select class="form-select model-select" id="modelSelect"></select>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <label class="form-label fw-semibold small">API Provider</label>
-                                                    <button id="configureProviderBtn" class="btn btn-outline-primary form-control text-start">
-                                                        <i class="bi bi-gear me-1"></i>Configure API Provider
-                                                    </button>
-                                                    <div id="providerStatus" class="provider-status text-muted">
-                                                        <i class="bi bi-exclamation-circle me-1"></i>No provider configured
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            
-                                            <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-2">
-                                                <button id="generateCodeBtn" class="btn btn-primary btn-sm"><i class="bi bi-code-slash me-1"></i>Generate Code</button>
-                                                <button id="executeCodeBtn" class="btn btn-success btn-sm ms-2" disabled><i class="bi bi-play-fill me-1"></i>Execute Code</button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="row" >
-                                <div id="generationProgress" class="progress mb-2 d-none">
-                                    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
-                                </div>
-                                <div class="col-12" id="generatedCodeSection">
-                                    <div class="card shadow-sm mb-3">
-                                        <div class="card-header bg-secondary text-white">
-                                            <h3 class="fs-6 mb-0"><i class="bi bi-code-square me-2"></i>Generated Code</h3>
-                                        </div>
-                                        <div class="card-body p-0">
-                                            <pre id="generatedCode" class="p-2 bg-body-tertiary rounded-bottom mb-0" style="max-height: 150px; overflow-y: auto;">// Code will appear here...</pre>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="row" >
-                                <div id="generationProgress1" class="progress mb-2 d-none">
-                                    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
-                                </div>
-                                <div class="col-12" id="personasSection">
-                                    <div class="card shadow-sm mb-3">
-                                        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-                                            <h3 class="fs-6 mb-0"><i class="bi bi-people-fill me-2"></i>Generated Personas</h3>
-                                            <span id="personaCount" class="badge bg-dark text-light">0</span>
-                                        </div>
-                                        <div class="card-body">
-                                            <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
-                                                <table id="personaTable" class="table table-sm table-striped table-hover">
-                                                    <thead class="table-dark sticky-top">
-                                                        <tr id="personaTableHeader">
-                                                            <th>Loading...</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody id="personaTableBody">
-                                                        <tr>
-                                                            <td>No personas generated yet</td>
-                                                        </tr>
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                            <div class="d-flex justify-content-start mt-2">
-                                                <button id="downloadPersonasBtn" class="btn btn-outline-success btn-sm" disabled><i class="bi bi-download me-1"></i>Download Personas (CSV)</button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+    </nav>
+
+    <!-- NEW: Main Content Wrapper -->
+    <main id="main-content">
+        <div class="container-fluid py-3">
+            <div class="row mb-3">
+                <div class="col-12 d-flex justify-content-end">
+                    <div class="position-relative my-1" role="group" aria-label="Toggle dark mode" title="Toggle Dark Mode">
+                        <button class="dark-theme-toggle btn btn-outline-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-circle-half"></i> <span class="d-lg-none ms-2">Toggle theme</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><button class="dropdown-item" data-bs-theme-value="light"><i class="me-2 bi bi-sun-fill"></i> Light</button></li>
+                            <li><button class="dropdown-item" data-bs-theme-value="dark"><i class="me-2 bi bi-moon-stars-fill"></i> Dark</button></li>
+                            <li><button class="dropdown-item" data-bs-theme-value="auto"><i class="me-2 bi bi-circle-half"></i> Auto</button></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="col-12 text-center">
+                    <div class="card border-0 bg-gradient shadow-sm mb-3">
+                        <div class="card-body py-3">
+                            <h1 class="display-6 fw-bold text-primary">Synthetic Persona Survey Demo</h1>
+                            <p class="lead text-muted small">Generate synthetic personas, run surveys through LLMs, and analyze results</p>
                         </div>
                     </div>
                 </div>
-            </div>
-
-            <!-- Template for model options to be cloned -->
-            <template id="modelOptionsTemplate">
-                <option value="gpt-4o-mini" selected>GPT-4o-mini</option>
-                <option value="gpt-4o">GPT-4o</option>
-                <option value="gpt-4-turbo">GPT-4-turbo</option>
-                <option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet</option>
-                <option value="claude-3-5-haiku-20241022">Claude 3.5 Haiku</option>
-                <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash</option>
-                <option value="llama-3.1-70b-instruct">Llama 3.1 70B</option>
-                <option value="deepseek-chat">DeepSeek V3</option>
-            </template>        
-            <!-- STEP 2: Run Survey -->
-            <div class="row mb-4" id="surveySection" style="display: none;">
-                <div class="col-12">
-                    <div class="card shadow-sm">
-                        <div class="card-header bg-primary text-white">
-                            <h3 class="fs-5 mb-0"><i class="bi bi-clipboard2-data-fill me-2"></i>2. Run Survey</h3>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="card shadow-sm mb-3 h-100">
-                                        <div class="card-header bg-primary text-white">
-                                            <h3 class="fs-6 mb-0"><i class="bi bi-clipboard-check-fill me-2"></i>Survey Configuration</h3>
-                                        </div>
-                                        <div class="card-body bg-body-tertiary">
-                                            <div class="mb-2">
-                                                <label for="surveyQuestions" class="form-label fw-semibold small">Survey Questions (one per line, format: Question: Option 1 / Option 2, etc.)</label>
-                                                <textarea class="form-control" id="surveyQuestions" rows="10">When choosing a fuel station, what matters most to you?
-(Price / Brand / Location / Loyalty Points)
-
-Do you prefer to receive fuel or service offers through:
-(App / SMS / Email / In-store Signage)
-
-When are you most likely to refuel your vehicle?
-(before 9 AM / 9 AM – 3 PM / after 3 PM / Only on weekends)
-
-If Shell introduced a bundled service that includes fuel, a free oil check, and coffee, how appealing would that be to you?
-(I would use it regularly / I would try it once / depends on the price / I prefer simpler fuel-only options)
-
-</textarea>
-                                            </div>
-                                            
-                                            <div class="row mb-2">
-                                                <div class="col-md-6">
-                                                    <label for="surveyParticipants" class="form-label fw-semibold small">Number of Survey Participants: <span id="surveyParticipantsValue" class="badge bg-primary">30</span></label>
-                                                    <input type="range" class="form-range" id="surveyParticipants" min="20" max="500" value="30">
-                                                </div>
-                                                <div class="col-md-6" style="display: none;">
-                                                    <label for="surveyTemperature" class="form-label fw-semibold small">Temperature: <span id="surveyTemperatureValue" class="badge bg-primary">1</span></label>
-                                                    <input type="range" class="form-range" id="surveyTemperature" min="0.1" max="1" step="0.1" value="1">
-                                                </div>
-                                            </div>
-                                            
-                                            <div class="mb-2">
-                                                <label for="surveyModelSelect" class="form-label fw-semibold small">Model</label>
-                                                <select class="form-select model-select" id="surveyModelSelect"></select>
-                                            </div>
-                                            
-                                            <div class="d-grid">
-                                                <button id="runSurveyBtn" class="btn btn-primary btn-sm" disabled><i class="bi bi-play-circle-fill me-1"></i>Run Survey</button>
-                                            </div>
-                                        </div>
-                                    </div>
+                <div id="demosSection" class="row mb-4">
+                    <div class="col-12">
+                        <div class="card shadow-sm">
+                            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                                <h3 class="fs-5 mb-0"><i class="bi bi-lightning-charge-fill me-2"></i>Quick Demos</h3>
+                            </div>
+                            <div class="card-body  bg-body-tertiary">
+                                <p class="small text-muted mb-3">Click on any demo card.</p>
+                                <div id="demoLoadingSpinner" class="text-center mb-3 d-none">
+                                    <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading demo...</span></div>
+                                    <p class="text-muted small mt-2">Loading demo data...</p>
                                 </div>
-                                
-                                <div class="col-md-6">
-                                    <div class="card shadow-sm mb-3 h-100">
-                                        <div class="card-header bg-success text-white">
-                                            <h3 class="fs-6 mb-0"><i class="bi bi-graph-up-arrow me-2"></i>Survey Progress</h3>
-                                        </div>
-                                        <div class="card-body">
-                                            <div id="surveyProgress" class="progress mb-3 d-none">
-                                                <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
-                                            </div>
-                                            
-                                            <div class="card mb-2">
-                                                <div class="card-header bg-info text-white py-1">
-                                                    <h5 class="fs-6 mb-0"><i class="bi bi-braces me-1"></i>JSON Schema</h5>
-                                                </div>
-                                                <div class="card-body p-0">
-                                                    <pre id="jsonSchemaDisplay" class="p-2 bg-body-tertiary rounded-bottom mb-0" style="max-height: 160px; overflow-y: auto;">No schema generated yet</pre>
-                                                </div>
-                                            </div>
-                                            
-                                            <div class="card mb-2">
-                                                <div class="card-header bg-success text-white d-flex justify-content-between align-items-center py-1">
-                                                    <h5 class="fs-6 mb-0"><i class="bi bi-journal-check me-1"></i>Survey Results</h5>
-                                                    <span id="responseCount" class="badge bg-dark text-light">0</span>
-                                                </div>
-                                                <div class="card-body bg-body-tertiary">
-                                                    <div id="surveyResultsPreview" style="max-height: 220px; overflow-y: auto;">
-                                                        <p class="text-muted small"><i class="bi bi-info-circle me-1"></i>Survey responses will appear here...</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            
-                                            <div class="d-flex justify-content-start">
-                                                <button id="downloadSurveyCsvBtn" class="btn btn-secondary ms-2" disabled>Download Results (CSV)</button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                                <div class="container-fluid p-0"><div id="demos" class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4 g-3"></div></div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
             
-            <!-- STEP 3: Results & Analysis -->
-            <div class="row mb-4" id="resultsSection" style="display: none;">
-                <div class="col-12">
-                    <div class="card shadow-sm">
-                        <div class="card-header bg-primary text-white">
-                            <h3 class="fs-5 mb-0"><i class="bi bi-bar-chart-fill me-2"></i>3. Results & Analysis</h3>
-                        </div>
-                        <div class="card-body">
-                            <div class="row mb-3">
-                                <div class="col-md-2">
-                                    <!-- Filters Card - Positioned on the left -->
-                                    <div class="card shadow-sm mb-3">
-                                        <div class="card-header bg-primary text-white">
-                                            <h3 class="fs-6 mb-0"><i class="bi bi-funnel-fill me-2"></i>Filter Results</h3>
-                                        </div>
-                                        <div class="card-body bg-body-tertiary">
-                                            <div id="filterControls">
-                                                <p class="text-muted small"><i class="bi bi-info-circle me-1"></i>Filters will be dynamically generated based on persona fields</p>
-                                            </div>
-                                            <div class="d-flex justify-content-center mt-2">
-                                                <button id="resetFiltersBtn" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-counterclockwise me-1"></i>Reset</button>
+            <div class="container-fluid">
+                <!-- STEP 1: Generate Personas -->
+                <div id="personaGenerationSection" class="row mb-4">
+                    <div class="col-12">
+                        <div class="card shadow-sm">
+                            <div class="card-header bg-primary text-white"><h3 class="fs-5 mb-0"><i class="bi bi-people-fill me-2"></i>1. Generate Personas</h3></div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-12">
+                                        <div class="card shadow-sm mb-3">
+                                            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center"><h3 class="fs-6 mb-0"><i class="bi bi-gear-fill me-2"></i>Select Persona Segment</h3></div>
+                                            <div class="card-body py-3 bg-body-tertiary">
+                                                <div class="row" id="segmentCardsContainer"></div>
+                                                <div id="personaConfigSection" class="mt-4"  >
+                                                    <div class="row">
+                                                        <div class="col-md-6">
+                                                            <div class="row mb-3">
+                                                                <div class="col-12">
+                                                                    <label for="numPersonas" class="form-label fw-semibold small">Number of People: <span id="numPersonasValue" class="badge bg-primary">30</span></label>
+                                                                    <input type="range" class="form-range" id="numPersonas" min="10" max="1000" value="30">
+                                                                </div>
+                                                                <div class="row mb-3">
+                                                                    <div class="col-12"><label for="modelSelect" class="form-label fw-semibold small">Model</label><select class="form-select model-select" id="modelSelect"></select></div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <div class="row mb-3">
+                                                                <div class="col-12">
+                                                                    <label class="form-label fw-semibold small">API Provider</label>
+                                                                    <button id="configureProviderBtn" class="btn btn-outline-primary form-control text-start"><i class="bi bi-gear me-1"></i>Configure API Provider</button>
+                                                                    <div id="providerStatus" class="provider-status text-muted"><i class="bi bi-exclamation-circle me-1"></i>No provider configured</div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-3">
+                                                        <button id="generateCodeBtn" class="btn btn-primary btn-sm"><i class="bi bi-code-slash me-1"></i>Generate Code</button>
+                                                        <button id="executeCodeBtn" class="btn btn-success btn-sm ms-2" disabled><i class="bi bi-play-fill me-1"></i>Execute Code</button>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                                
-                                <div class="col-md-10">
-                                    <!-- Charts Container - Takes remaining space -->
-                                    <div class="card shadow-sm mb-3">
-                                        <div class="card-header bg-success text-white">
-                                            <h3 class="fs-6 mb-0"><i class="bi bi-pie-chart-fill me-2"></i>Survey Results Charts</h3>
-                                        </div>
-                                        <div class="card-body bg-body-tertiary">
-                                            <div id="chartsContainer" class="row">
-                                                <p class="text-muted small"><i class="bi bi-info-circle me-1"></i>Charts will appear here once survey results are available</p>
+                                <div class="row">
+                                    <div id="generationProgress" class="progress mb-2 d-none"><div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div></div>
+                                    <div class="col-12" id="generatedCodeSection"><div class="card shadow-sm mb-3"><div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center"><h3 class="fs-6 mb-0 collapsible-toggle collapsed" data-bs-toggle="collapse" data-bs-target="#generatedCodeCollapse" aria-expanded="false" aria-controls="generatedCodeCollapse"><i class="bi bi-code-square me-2"></i>Generated Code</h3><span class="badge bg-light text-dark" id="codeStatusBadge">Generated</span></div><div class="collapse" id="generatedCodeCollapse"><div class="card-body p-0"><pre id="generatedCode" class="p-2 bg-body-tertiary rounded-bottom mb-0" style="max-height: 150px; overflow-y: auto;">// Code will appear here...</pre></div></div></div></div>
+                                </div>
+                                <div class="row" >
+                                    <div id="generationProgress1" class="progress mb-2 d-none"><div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div></div>
+                                    <div class="col-12" id="personasSection"><div class="card shadow-sm mb-3"><div class="card-header bg-success text-white d-flex justify-content-between align-items-center"><h3 class="fs-6 mb-0"><i class="bi bi-people-fill me-2"></i>Generated Personas</h3><span id="personaCount" class="badge bg-dark text-light">0</span></div><div class="card-body"><div class="table-responsive" style="max-height: 300px; overflow-y: auto;"><table id="personaTable" class="table table-sm table-striped table-hover"><thead class="table-dark sticky-top"><tr id="personaTableHeader"><th>Loading...</th></tr></thead><tbody id="personaTableBody"><tr><td>No personas generated yet</td></tr></tbody></table></div><div class="d-flex justify-content-start mt-2"><button id="downloadPersonasBtn" class="btn btn-outline-success btn-sm" disabled><i class="bi bi-download me-1"></i>Download Personas (CSV)</button></div></div></div></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>  
+                <!-- STEP 2: Run Survey -->
+                <div id="surveySectionWrapper" class="row mb-4"  >
+                    <div class="col-12">
+                        <div class="card shadow-sm">
+                            <div class="card-header bg-primary text-white"><h3 class="fs-5 mb-0"><i class="bi bi-clipboard2-data-fill me-2"></i>2. Run Survey</h3></div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="card shadow-sm mb-3 h-100">
+                                            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                                                <h3 class="fs-6 mb-0"><i class="bi bi-clipboard-check-fill me-2"></i>Survey Questions</h3>
+                                                <button id="addQuestionBtn" class="btn btn-sm btn-light"><i class="bi bi-plus-circle-fill me-1"></i>Add Question</button>
+                                            </div>
+                                            <div class="card-body bg-body-tertiary" id="dynamicQuestionsContainer" style="max-height: 450px; overflow-y: auto;">
+                                                <!-- Dynamic questions will be rendered here -->
+                                            </div>
+                                            <div class="card-footer">
+                                                <div class="row mb-2">
+                                                    <div class="col-md-6">
+                                                        <label for="surveyParticipants" class="form-label fw-semibold small">Participants: <span id="surveyParticipantsValue" class="badge bg-primary">30</span></label>
+                                                        <input type="range" class="form-range" id="surveyParticipants" min="20" max="500" value="30">
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label for="surveyModelSelect" class="form-label fw-semibold small">Model</label>
+                                                        <select class="form-select model-select" id="surveyModelSelect"></select>
+                                                    </div>
+                                                </div>
+                                                <div class="d-grid">
+                                                    <button id="runSurveyBtn" class="btn btn-primary btn-sm" disabled><i class="bi bi-play-circle-fill me-1"></i>Run Survey</button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                    
-                                    <!-- Results Table Card -->
-                                    <div class="card shadow-sm">
-                                        <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
-                                            <h3 class="fs-6 mb-0"><i class="bi bi-table me-2"></i>Results Table</h3>
-                                        </div>
-                                        <div class="card-body p-0">
-                                            <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
-                                                <table id="resultsTable" class="table table-sm table-striped table-hover mb-0">
-                                                    <thead class="table-dark">
-                                                        <tr id="resultsTableHeader">
-                                                            <th>No data available</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody id="resultsTableBody">
-                                                        <tr>
-                                                            <td>Run the survey to see results</td>
-                                                        </tr>
-                                                    </tbody>
-                                                </table>
+                                    <div class="col-md-6">
+                                        <div class="card shadow-sm mb-3 h-100">
+                                            <div id="jsonSchemaContainer" class="mt-3" style="display: none;">
+                                                <pre class="bg-light p-3 border rounded small" style="max-height: 300px; overflow: auto;"></pre>
+                                            </div>
+
+                                            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                                                <h3 class="fs-6 mb-0"><i class="bi bi-grid-3x3-gap-fill me-2"></i>Live Survey Responses</h3>
+                                                <span id="responseCount" class="badge bg-dark text-light">0</span>
+                                            </div>
+                                            <div class="card-body">
+                                                <div id="surveyProgress" class="progress mb-3 d-none"><div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div></div>
+                                                <div id="surveyResultsMatrix" style="max-height: 500px; overflow: auto;">
+                                                    <p class="text-muted small"><i class="bi bi-info-circle me-1"></i>Survey responses will appear here as a matrix...</p>
+                                                </div>
+                                                <div class="d-flex justify-content-start mt-3">
+                                                    <button id="downloadSurveyCsvBtn" class="btn btn-outline-secondary btn-sm" disabled><i class="bi bi-download me-1"></i>Download Results (CSV)</button>
+                                                </div>
                                             </div>
                                         </div>
-                                        <div class="card-footer py-2">
-                                            <button id="downloadResultsBtn" class="btn btn-success btn-sm" disabled><i class="bi bi-download me-1"></i>Download Complete Results (CSV)</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- STEP 3: Results & Analysis -->
+                <div id="resultsSectionWrapper" class="row mb-4"  >
+                    <div class="col-12">
+                        <div class="card shadow-sm">
+                            <div class="card-header bg-primary text-white"><h3 class="fs-5 mb-0"><i class="bi bi-bar-chart-fill me-2"></i>3. Results & Analysis</h3></div>
+                            <div class="card-body">
+                                <div class="row mb-3">
+                                    <div class="col-md-3">
+                                        <div class="card shadow-sm mb-3">
+                                            <div class="card-header bg-primary text-white"><h3 class="fs-6 mb-0"><i class="bi bi-funnel-fill me-2"></i>Filter Results</h3></div>
+                                            <div class="card-body bg-body-tertiary">
+                                                <div id="filterControls"><p class="text-muted small"><i class="bi bi-info-circle me-1"></i>Filters will be dynamically generated.</p></div>
+                                                <div class="d-flex justify-content-center mt-2"><button id="resetFiltersBtn" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-counterclockwise me-1"></i>Reset</button></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-9">
+                                        <div class="card shadow-sm mb-3">
+                                            <div class="card-header bg-success text-white"><h3 class="fs-6 mb-0"><i class="bi bi-pie-chart-fill me-2"></i>Survey Results Charts</h3></div>
+                                            <div class="card-body bg-body-tertiary">
+                                                <div id="chartsContainer" class="row row-cols-1 g-3"><p class="text-muted small"><i class="bi bi-info-circle me-1"></i>Charts will appear here.</p></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-12">
+                                        <div class="card shadow-sm">
+                                            <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center"><h3 class="fs-6 mb-0"><i class="bi bi-table me-2"></i>Detailed Results Table</h3></div>
+                                            <div class="card-body p-0">
+                                                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                                                    <table id="resultsTable" class="table table-sm table-striped table-hover mb-0"><thead class="table-dark">
+                                                        <tr id="resultsTableHeader"><th>No data available</th></tr></thead>
+                                                        <tbody id="resultsTableBody"><tr><td>Run the survey to see results</td></tr></tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                            <div class="card-footer py-2"><button id="downloadResultsBtn" class="btn btn-success btn-sm" disabled><i class="bi bi-download me-1"></i>Download Complete Results (CSV)</button></div>
                                         </div>
                                     </div>
                                 </div>
@@ -377,29 +294,52 @@ If Shell introduced a bundled service that includes fuel, a free oil check, and 
                 </div>
             </div>
         </div>
-    </div>
-
+    </main>
+    
     <!-- Modal for displaying errors -->
     <div class="modal fade" id="errorModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-sm">
+        <div class="modal-dialog modal-sm"><div class="modal-content"><div class="modal-header bg-danger text-white py-2"><h5 class="modal-title fs-6"><i class="bi bi-exclamation-triangle-fill me-1"></i>Error</h5><button type="button" class="btn-close btn-sm" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body small" id="errorModalBody">An error occurred.</div><div class="modal-footer py-1"><button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button></div></div></div>
+    </div>
+    
+    <!-- Modal for editing segment details -->
+    <div class="modal fade" id="editSegmentModal" tabindex="-1" aria-labelledby="editSegmentModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header bg-primary text-white"><h5 class="modal-title" id="editSegmentModalLabel">Edit Segment</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><form id="editSegmentForm"><input type="hidden" id="editSegmentKey"><div class="mb-3"><label for="editSegmentName" class="form-label">Segment Name</label><input type="text" class="form-control" id="editSegmentName"></div><div class="mb-3"><label for="editSegmentDescription" class="form-label">Segment Description</label><textarea class="form-control" id="editSegmentDescription" rows="5"></textarea></div><div class="mb-3"><label for="editSegmentFields" class="form-label">Fields (one per line)</label><textarea class="form-control" id="editSegmentFields" rows="8"></textarea></div></form></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button type="button" class="btn btn-primary" id="saveSegmentChanges">Save Changes</button></div></div></div>
+    </div>
+
+    <!-- NEW: Modal for adding/editing survey questions -->
+    <div class="modal fade" id="questionModal" tabindex="-1" aria-labelledby="questionModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
             <div class="modal-content">
-                <div class="modal-header bg-danger text-white py-2">
-                    <h5 class="modal-title fs-6"><i class="bi bi-exclamation-triangle-fill me-1"></i>Error</h5>
-                    <button type="button" class="btn-close btn-sm" data-bs-dismiss="modal" aria-label="Close"></button>
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="questionModalLabel">Add/Edit Question</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body small" id="errorModalBody">
-                    An error occurred.
+                <div class="modal-body">
+                    <form id="questionForm">
+                        <input type="hidden" id="questionModalIndex">
+                        <div class="mb-3">
+                            <label for="questionText" class="form-label">Question</label>
+                            <input type="text" class="form-control" id="questionText" placeholder="e.g., What matters most to you?">
+                        </div>
+                        <div class="mb-3">
+                            <label for="questionOptions" class="form-label">Options (one per line)</label>
+                            <textarea class="form-control" id="questionOptions" rows="4" placeholder="e.g.,&#10;Price&#10;Brand&#10;Location"></textarea>
+                        </div>
+                    </form>
                 </div>
-                <div class="modal-footer py-1">
-                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="saveQuestionBtn">Save Question</button>
                 </div>
             </div>
         </div>
     </div>
+    <div class="tooltip" style="opacity: 0;"></div>
 
-    <script type="module" src="script.js"></script>
+    
     <script src="https://cdn.jsdelivr.net/npm/@gramex/ui@0.3.1/dist/dark-theme.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+    <script type="module" src="script.js"></script>
 </body>
 </html>

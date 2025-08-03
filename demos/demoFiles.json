@@ -2,12 +2,22 @@
   {
     "id": "value-seekers",
     "title": "Shell Synthetic Persona Survey ",
+    "images": [
+    "images/img_1.png",
+    "images/img_2.png",
+    "images/img_3.png"
+     ],
     "icon": "bi-fuel-pump-fill",
     "file": "demos/shell.json"
   },
   {
     "id": "brand-loyal",
     "title": "Mars Petcare - Willingness to Pay Survey",
+    "images": [
+    "images/img_4.png",
+    "images/img_5.png",
+    "images/img_6.png"
+  ],
     "icon": "bi bi-yin-yang",
     "file": "demos/petcare.json"
   }
