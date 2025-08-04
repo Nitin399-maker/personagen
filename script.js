@@ -141,8 +141,6 @@ updateModelOptions() {
         }
         return { id: String(model), name: String(model) };
     }).filter(model => model.id);
-    console.log('Preferred:', PREFERRED_MODELS);
-    console.log('All model IDs:', modelsList.map(m => m.id));
     const filteredModels = modelsList.filter(model => PREFERRED_MODELS.includes(model.id));
     if (!filteredModels.length) {
         console.warn('❗ No preferred models found:', modelsList.map(m => m.id));
@@ -157,10 +155,8 @@ updateModelOptions() {
             select.appendChild(option);
         });
     });
-
     console.log(`✅ Loaded ${filteredModels.length} preferred models:`, filteredModels.map(m => m.id));
-}
-,
+},
     showError(message) {
         const errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
         document.getElementById('errorModalBody').textContent = message;

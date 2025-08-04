@@ -3,6 +3,7 @@
 A comprehensive tool to generate synthetic personas, run surveys through LLMs, and analyze results—all within a clean, interactive interface.
 
 ---
+![App Screenshot](images/Screenshot.webp)
 
 ## **Features**
 
