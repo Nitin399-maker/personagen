@@ -365,7 +365,14 @@ const personas = {
             progressBar.classList.remove('d-none');
             ui.updateProgress(progressBar, 50, 'Executing code...');
             state.personas = [];
-            const executeCode = new Function(`try { ${state.generatedCode} return { success: true, result: generatePersonas() }; } catch (error) { return { success: false, error: error.message }; }`);
+            const executeCode = new Function(`
+                try {
+                    ${state.generatedCode}
+                    return { success: true, result: generatePersonas() };
+                } catch (error) {
+                    return { success: false, error: error.message };
+                }
+            `);
             const result = executeCode();
             if (!result.success) { throw new Error(`Code execution failed: ${result.error}`); }
             state.personas = result.result;
