@@ -21,7 +21,6 @@ const state = {
 const elements = {};
 let questionModalInstance = null;
 const CONSTANTS = {
-    PREFERRED_MODELS: ['gpt-4.1-mini', 'gpt-4.1-nano', 'gpt-4o-mini'],
     CHART_COLORS: [
         "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", 
         "#9467bd", "#8c564b", "#e377c2", "#7f7f7f", 
@@ -126,37 +125,35 @@ const ui = {
             : '<i class="bi bi-exclamation-circle me-1"></i>No provider configured';
         elements.providerStatus.className = `provider-status ${hasValidConfig ? 'text-success' : 'text-muted'}`;
     },
-updateModelOptions() {
-    const { llmConfig } = state;
-    const selects = [elements.personaModelSelect, elements.surveyModelSelect];
-    if (!llmConfig?.models?.length) return;
-    const PREFERRED_MODELS = ['gpt-4.1-mini', 'gpt-4.1-nano', 'o4-mini'];
-    const modelsList = llmConfig.models.map(model => {
-        if (typeof model === 'string') return { id: model, name: model };
-        if (typeof model === 'object' && model) {
-            return {
-                id: model.id || model.name || model.model || String(model),
-                name: model.name || model.id || model.model || String(model)
-            };
+    updateModelOptions() {
+        const { llmConfig } = state;
+        const selects = [elements.personaModelSelect, elements.surveyModelSelect];
+        if (!llmConfig?.models?.length) return;
+        const PREFERRED_MODELS = ['gpt-4.1-mini', 'gpt-4.1-nano', 'o4-mini'];
+        const modelsList = llmConfig.models.map(model => {
+            let id, name;
+            if (typeof model === 'string') { id = model; } 
+            else if (typeof model === 'object' && model) {
+                id = model.id || model.name || model.model || String(model);
+            } else { id = String(model); }
+            name = id.includes('/') ? id.split('/').pop() : id;
+            return { id, name };
+        }).filter(model => model.id);
+        const filteredModels = modelsList.filter(model => PREFERRED_MODELS.includes(model.name));
+        if (!filteredModels.length) {
+            console.warn('❗ No preferred models found:', modelsList.map(m => m.id));
+            return;
         }
-        return { id: String(model), name: String(model) };
-    }).filter(model => model.id);
-    const filteredModels = modelsList.filter(model => PREFERRED_MODELS.includes(model.id));
-    if (!filteredModels.length) {
-        console.warn('❗ No preferred models found:', modelsList.map(m => m.id));
-        return;
-    }
-    selects.forEach(select => {
-        select.innerHTML = '';
-        filteredModels.forEach(model => {
-            const option = document.createElement('option');
-            option.value = model.id;
-            option.textContent = model.name;
-            select.appendChild(option);
+        selects.forEach(select => {
+            select.innerHTML = '';
+            filteredModels.forEach(model => {
+                const option = document.createElement('option');
+                option.value = model.id;
+                option.textContent = model.name;
+                select.appendChild(option);
+            });
         });
-    });
-    console.log(`✅ Loaded ${filteredModels.length} preferred models:`, filteredModels.map(m => m.id));
-},
+    },
     showError(message) {
         const errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
         document.getElementById('errorModalBody').textContent = message;
@@ -821,7 +818,10 @@ const results = {
         elements.resultsTableBody.appendChild(bodyFragment);
     }
 };
-
+const demoToSegmentMap = {
+    "Top Fuel and Convenience Retailer - Synthetic Audience Survey": "Value Seeking Commuters",
+    "Top Petcare Provider - Willingness to Pay Survey": "Budget-Conscious Suburban Owner"
+};
 const demo = {
     async loadDemoData(demoFile) {
         try {
@@ -835,6 +835,15 @@ const demo = {
             document.querySelectorAll('.demo-card').forEach(card => card.classList.remove('selected'));
             document.querySelector(`.demo-card[data-file="${demoFile}"]`)?.classList.add('selected');
             await segments.loadSegmentData("segments.json", segmentKey);
+            const demoTitle = demoInfo?.title?.trim();
+            const targetSegmentName = demoToSegmentMap[demoTitle];
+            if (targetSegmentName) {
+                requestAnimationFrame(() => {
+                    const targetCard = [...document.querySelectorAll('.card-body.text-center')]
+                        .find(card => card.querySelector('.card-title')?.textContent.trim() === targetSegmentName);
+                    targetCard?.click();
+                });
+            }
             document.getElementById('demoLoadingSpinner').classList.remove('d-none');
             const response = await fetch(demoFile);
             if (!response.ok) { throw new Error(`Failed to load demo file: ${response.statusText}`); }
