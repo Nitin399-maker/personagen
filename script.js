@@ -132,10 +132,13 @@ const ui = {
         const PREFERRED_MODELS = ['gpt-4.1-mini', 'gpt-4.1-nano', 'o4-mini'];
         const modelsList = llmConfig.models.map(model => {
             let id, name;
-            if (typeof model === 'string') { id = model; } 
-            else if (typeof model === 'object' && model) {
+            if (typeof model === 'string') {
+                id = model;
+            } else if (typeof model === 'object' && model) {
                 id = model.id || model.name || model.model || String(model);
-            } else { id = String(model); }
+            } else {
+                id = String(model);
+            }
             name = id.includes('/') ? id.split('/').pop() : id;
             return { id, name };
         }).filter(model => model.id);
@@ -144,6 +147,11 @@ const ui = {
             console.warn('❗ No preferred models found:', modelsList.map(m => m.id));
             return;
         }
+        filteredModels.sort((a, b) => {
+            if (a.name === 'gpt-4.1-nano') return -1;
+            if (b.name === 'gpt-4.1-nano') return 1;
+            return 0;
+        });
         selects.forEach(select => {
             select.innerHTML = '';
             filteredModels.forEach(model => {

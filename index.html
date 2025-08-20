@@ -91,19 +91,52 @@
     <!-- NEW: Main Content Wrapper -->
     <main id="main-content">
         <div class="container-fluid py-3">
-            <div class="row mb-3">
-                <div class="col-12 d-flex justify-content-end">
-                    <div class="position-relative my-1" role="group" aria-label="Toggle dark mode" title="Toggle Dark Mode">
-                        <button class="dark-theme-toggle btn btn-outline-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-circle-half"></i> <span class="d-lg-none ms-2">Toggle theme</span>
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><button class="dropdown-item" data-bs-theme-value="light"><i class="me-2 bi bi-sun-fill"></i> Light</button></li>
-                            <li><button class="dropdown-item" data-bs-theme-value="dark"><i class="me-2 bi bi-moon-stars-fill"></i> Dark</button></li>
-                            <li><button class="dropdown-item" data-bs-theme-value="auto"><i class="me-2 bi bi-circle-half"></i> Auto</button></li>
-                        </ul>
-                    </div>
+        <div class="row mb-3">
+        <div class="col-12 d-flex justify-content-end">
+            <div class="d-flex justify-content-end gap-3 my-2">
+
+            <!-- Icon for Persona Generation -->
+            <div class="btn-group">
+                <button class="btn btn-outline-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Select Persona Model">
+                <i class="bi bi-person-gear"></i>
+                </button>
+                <div class="dropdown-menu dropdown-menu-end p-3" style="min-width: 280px;">
+                <div class="mb-3">
+                    <label for="modelSelect" class="form-label fw-semibold small">Model For Generating Participants</label>
+                    <select class="form-select model-select" id="modelSelect"></select>
                 </div>
+                </div>
+            </div>
+
+            <!-- Icon for Survey Run -->
+            <div class="btn-group">
+                <button class="btn btn-outline-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Select Survey Model">
+                <i class="bi bi-bar-chart"></i>
+                </button>
+                <div class="dropdown-menu dropdown-menu-end p-3" style="min-width: 280px;">
+                <div class="mb-2">
+                    <label for="surveyModelSelect" class="form-label fw-semibold small">Model For Running Survey</label>
+                    <select class="form-select model-select" id="surveyModelSelect"></select>
+                </div>
+                </div>
+            </div>
+
+            <!-- Icon for Dark Mode -->
+            <div class="btn-group" role="group" aria-label="Toggle dark mode" title="Toggle Dark Mode">
+                <button class="dark-theme-toggle btn btn-outline-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-circle-half"></i> <span class="d-lg-none ms-2">Toggle theme</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                <li><button class="dropdown-item" data-bs-theme-value="light"><i class="me-2 bi bi-sun-fill"></i> Light</button></li>
+                <li><button class="dropdown-item" data-bs-theme-value="dark"><i class="me-2 bi bi-moon-stars-fill"></i> Dark</button></li>
+                <li><button class="dropdown-item" data-bs-theme-value="auto"><i class="me-2 bi bi-circle-half"></i> Auto</button></li>
+                </ul>
+            </div>
+
+            </div>
+        </div>
+        </div>
+
                 <div class="col-12 text-center">
                     <div class="card border-0 bg-gradient shadow-sm mb-3">
                         <div class="card-body py-3">
@@ -151,9 +184,6 @@
                                                                 <div class="col-12">
                                                                     <label for="numPersonas" class="form-label fw-semibold small">Number of People: <span id="numPersonasValue" class="badge bg-primary">30</span></label>
                                                                     <input type="range" class="form-range" id="numPersonas" min="10" max="1000" value="30">
-                                                                </div>
-                                                                <div class="row mb-3">
-                                                                    <div class="col-12"><label for="modelSelect" class="form-label fw-semibold small">Model</label><select class="form-select model-select" id="modelSelect"></select></div>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -209,10 +239,6 @@
                                                     <div class="col-md-6">
                                                         <label for="surveyParticipants" class="form-label fw-semibold small">Participants: <span id="surveyParticipantsValue" class="badge bg-primary">30</span></label>
                                                         <input type="range" class="form-range" id="surveyParticipants" min="20" max="500" value="30">
-                                                    </div>
-                                                    <div class="col-md-6">
-                                                        <label for="surveyModelSelect" class="form-label fw-semibold small">Model</label>
-                                                        <select class="form-select model-select" id="surveyModelSelect"></select>
                                                     </div>
                                                 </div>
                                                 <div class="d-grid">
