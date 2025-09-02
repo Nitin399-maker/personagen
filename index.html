@@ -360,6 +360,37 @@
             </div>
         </div>
     </div>
+    <!-- NEW: Modal for creating custom segment -->
+    <div class="modal fade" id="createCustomSegmentModal" tabindex="-1" aria-labelledby="createCustomSegmentModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="createCustomSegmentModalLabel">Create Your Own Segment</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="createCustomSegmentForm">
+                        <div class="mb-3">
+                            <label for="customSegmentName" class="form-label">Segment Name</label>
+                            <input type="text" class="form-control" id="customSegmentName" placeholder="e.g., Tech-Savvy Millennials">
+                        </div>
+                        <div class="mb-3">
+                            <label for="customSegmentDescription" class="form-label">Segment Description</label>
+                            <textarea class="form-control" id="customSegmentDescription" rows="5" placeholder="Describe the characteristics, behaviors, and demographics of this segment..."></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="customSegmentFields" class="form-label">Fields (one per line)</label>
+                            <textarea class="form-control" id="customSegmentFields" rows="8" placeholder="age&#10;gender&#10;income&#10;location&#10;education&#10;interests"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="createCustomSegmentBtn">Create Segment</button>
+                </div>
+            </div>
+        </div>
+    </div>
     <div class="tooltip" style="opacity: 0;"></div>
 
     

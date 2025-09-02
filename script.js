@@ -152,7 +152,7 @@ const ui = {
             if (b.name === 'gpt-4.1-nano') return 1;
             return 0;
         });
-        selects.forEach(select => {
+        selects.forEach((select, index) => {
             select.innerHTML = '';
             filteredModels.forEach(model => {
                 const option = document.createElement('option');
@@ -160,6 +160,13 @@ const ui = {
                 option.textContent = model.name;
                 select.appendChild(option);
             });
+            if (index === 0) { 
+                const defaultModel = filteredModels.find(model => model.name === 'gpt-4.1-mini');
+                if (defaultModel) {    select.value = defaultModel.id;  }
+            } else if (index === 1) {
+                const defaultModel = filteredModels.find(model => model.name === 'gpt-4.1-nano');
+                if (defaultModel) {  select.value = defaultModel.id;  }
+            }
         });
     },
     showError(message) {
@@ -876,7 +883,185 @@ const demo = {
             document.getElementById('demoLoadingSpinner').classList.add('d-none');
         }
     },
+    createCustomDemoCard() {
+        const demosContainer = document.getElementById('demos');
+        if (!demosContainer) return;
+        const customCard = document.createElement('div');
+        customCard.className = 'col mb-4';
+        customCard.innerHTML = `
+            <div class="card h-100 demo-card border-primary" role="button" style="cursor: pointer; border-width: 2px;" data-custom="true">
+                <div class="card-body text-center">
+                    <div class="d-flex justify-content-center align-items-center mb-3">
+                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                            <i class="bi bi-plus-lg" style="font-size: 1.5rem;"></i>
+                        </div>
+                    </div>
+                    <h5 class="card-title text-primary">Create Your Own</h5>
+                    <p class="card-text small text-muted">Define your own segment, questions, and run a custom survey from scratch</p>
+                </div>
+            </div>
+        `;
+        demosContainer.insertBefore(customCard, demosContainer.firstChild);
+    },
 
+    openCustomSegmentModal() {
+        const modal = new bootstrap.Modal(document.getElementById('createCustomSegmentModal'));
+        document.getElementById('createCustomSegmentForm').reset();
+        modal.show();
+    },
+
+    async createCustomSegment() {
+        const name = document.getElementById('customSegmentName').value.trim();
+        const description = document.getElementById('customSegmentDescription').value.trim();
+        const fields = document.getElementById('customSegmentFields').value.trim();
+        if (!name || !description || !fields) {
+            ui.showError("Please fill in all fields to create your custom segment.");
+            return;
+        }
+        try {
+            const customKey = 'custom_segment';
+            state.segmentData = {
+                [customKey]: {
+                    name: name,
+                    description: description,
+                    fields: fields
+                }
+            };
+            state.segmentIcons = {
+                [customKey]: "data:image/svg+xml;base64," + btoa(`
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="45" fill="#198754"/>
+                        <text x="50" y="60" font-family="Arial" font-size="40" fill="white" text-anchor="middle">+</text>
+                    </svg>
+                `)
+            };
+            this.resetAppState();
+            segments.displaySegmentCards();
+            setTimeout(() => {
+                const customSegmentCard = document.querySelector(`[data-segment-key="${customKey}"]`);
+                if (customSegmentCard) {
+                    customSegmentCard.click();
+                }
+            }, 100);
+            const modal = bootstrap.Modal.getInstance(document.getElementById('createCustomSegmentModal'));
+            modal.hide();
+            document.querySelectorAll('.demo-card').forEach(card => card.classList.remove('selected'));
+            document.getElementById('personaGenerationSection').scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'start' 
+            });
+
+        } catch (error) {
+            console.error('Error creating custom segment:', error);
+            ui.showError(`Error creating custom segment: ${error.message}`);
+        }
+    },
+
+    resetAppState() {
+        state.personas = [];
+        state.surveyResults = [];
+        state.surveyQuestions = [];
+        state.surveyOptions = [];
+        state.charts.forEach(chart => chart.destroy());
+        state.charts = [];
+        state.generatedCode = '';
+        state.currentSegmentKey = "";
+        state.colorScales = {};
+        state.segmentPrompt = "";
+        state.fieldsList = "";
+        elements.personaCount.textContent = '0';
+        elements.responseCount.textContent = '0';
+        elements.generatedCode.textContent = '// Code will appear here...';
+        elements.personaTableBody.innerHTML = '<tr><td>No personas generated yet</td></tr>';
+        elements.surveyResultsMatrix.innerHTML = '<p class="text-muted small"><i class="bi bi-info-circle me-1"></i>Survey responses will appear here as a matrix...</p>';
+        elements.chartsContainer.innerHTML = '<p class="text-muted small"><i class="bi bi-info-circle me-1"></i>Charts will appear here.</p>';
+        elements.dynamicQuestionsContainer.innerHTML = '<p class="text-muted small p-3 text-center">No survey questions added yet. Click "Add Question" to start.</p>';
+        ['generatedCodeSection', 'personasSection', 'surveySectionWrapper', 'resultsSectionWrapper'].forEach(sectionId => {
+            const section = document.getElementById(sectionId);
+            if (section) section.style.display = 'none';
+        });
+        ['executeCodeBtn', 'downloadPersonasBtn', 'runSurveyBtn', 'downloadSurveyCsvBtn', 'downloadResultsBtn'].forEach(btnId => {
+            const btn = document.getElementById(btnId);
+            if (btn) btn.disabled = true;
+        });
+    },
+
+    openCustomSegmentModal() {
+        const modal = new bootstrap.Modal(document.getElementById('createCustomSegmentModal'));
+        document.getElementById('createCustomSegmentForm').reset();
+        modal.show();
+    },
+
+    async createCustomSegment() {
+        const name = document.getElementById('customSegmentName').value.trim();
+        const description = document.getElementById('customSegmentDescription').value.trim();
+        const fields = document.getElementById('customSegmentFields').value.trim();
+        if (!name || !description || !fields) {
+            ui.showError("Please fill in all fields to create your custom segment.");
+            return;
+        }
+        try {
+            const customKey = 'custom_segment';
+            state.segmentData = {
+                [customKey]: {  name: name, description: description,  fields: fields  }
+            };
+            state.segmentIcons = {
+                [customKey]: "data:image/svg+xml;base64," + btoa(`
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="45" fill="#198754"/>
+                        <text x="50" y="60" font-family="Arial" font-size="40" fill="white" text-anchor="middle">+</text>
+                    </svg>
+                `)
+            };
+            this.resetAppState();
+            segments.displaySegmentCards();
+            setTimeout(() => {
+                const customSegmentCard = document.querySelector(`[data-segment-key="${customKey}"]`);
+                if (customSegmentCard) {
+                    customSegmentCard.click();
+                }
+            }, 100);
+            const modal = bootstrap.Modal.getInstance(document.getElementById('createCustomSegmentModal'));
+            modal.hide();
+            document.querySelectorAll('.demo-card').forEach(card => card.classList.remove('selected'));
+            document.getElementById('personaGenerationSection').scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'start' 
+            });
+        } catch (error) {
+            console.error('Error creating custom segment:', error);
+            ui.showError(`Error creating custom segment: ${error.message}`);
+        }
+    },
+
+    resetAppState() {
+        state.personas = [];
+        state.surveyResults = [];
+        state.surveyQuestions = [];
+        state.surveyOptions = [];
+        state.charts.forEach(chart => chart.destroy());
+        state.charts = [];
+        state.generatedCode = '';
+        state.currentSegmentKey = "";
+        state.colorScales = {};
+        state.segmentPrompt = "";
+        state.fieldsList = "";
+        elements.personaCount.textContent = '0';
+        elements.responseCount.textContent = '0';
+        elements.generatedCode.textContent = '// Code will appear here...';
+        elements.personaTableBody.innerHTML = '<tr><td>No personas generated yet</td></tr>';
+        elements.surveyResultsMatrix.innerHTML = '<p class="text-muted small"><i class="bi bi-info-circle me-1"></i>Survey responses will appear here as a matrix...</p>';
+        elements.chartsContainer.innerHTML = '<p class="text-muted small"><i class="bi bi-info-circle me-1"></i>Charts will appear here.</p>';
+        elements.dynamicQuestionsContainer.innerHTML = '<p class="text-muted small p-3 text-center">No survey questions added yet. Click "Add Question" to start.</p>';
+        ['generatedCodeSection', 'personasSection', 'surveySectionWrapper', 'resultsSectionWrapper'].forEach(sectionId => {
+            const section = document.getElementById(sectionId);
+            if (section) section.style.display = 'none';
+        });
+        ['executeCodeBtn', 'downloadPersonasBtn', 'runSurveyBtn', 'downloadSurveyCsvBtn', 'downloadResultsBtn'].forEach(btnId => {
+            const btn = document.getElementById(btnId);
+            if (btn) btn.disabled = true;
+        });
+    },
     parseDemoQuestions(questionsText) {
         const questionLines = questionsText.split('\n').filter(line => line.trim());
         const surveyQuestions = [];
@@ -949,7 +1134,7 @@ const demo = {
             .then(response => response.json())
             .then(demoFiles => {
                 state.demoFiles = demoFiles;
-                demosContainer.innerHTML = demoFiles.map(demo => `
+                const demoCardsHtml = demoFiles.map(demo => `
                     <div class="col mb-4">
                         <div class="card h-100 demo-card" role="button" style="cursor: pointer;" data-file="${demo.file}">
                             <div class="card-body text-center">
@@ -961,6 +1146,8 @@ const demo = {
                             </div>
                         </div>
                     </div>`).join('');
+                demosContainer.innerHTML = demoCardsHtml;
+                this.createCustomDemoCard();
             })
             .catch(error => console.error('Error loading demo files:', error));
     }
@@ -991,6 +1178,7 @@ const handlers = {
             'sidebar-toggle': () => ui.toggleSidebar(),
             'addQuestionBtn': () => survey.openQuestionModal(),
             'saveQuestionBtn': () => survey.saveQuestion(),
+            'createCustomSegmentBtn': () => demo.createCustomSegment(), // NEW
         };
         Object.entries(buttonHandlers).forEach(([buttonId, handler]) => {
             const button = document.getElementById(buttonId);
@@ -1003,13 +1191,17 @@ const handlers = {
         });
     },
     setupDynamicHandlers() {
-        document.addEventListener('click', function(e) {
-            const card = e.target.closest('.demo-card');
-            if (card) {
-                const demoFile = card.getAttribute('data-file');
-                if (demoFile) demo.loadDemoData(demoFile);
+    document.addEventListener('click', function(e) {
+        const card = e.target.closest('.demo-card');
+        if (card) {
+            if (card.dataset.custom === 'true') {
+                demo.openCustomSegmentModal();
+                return;
             }
-        });
+            const demoFile = card.getAttribute('data-file');
+            if (demoFile) demo.loadDemoData(demoFile);
+        }
+    });
         elements.dynamicQuestionsContainer.addEventListener('click', e => {
             const editBtn = e.target.closest('.edit-question-btn');
             if (editBtn) {
