@@ -910,53 +910,6 @@ const demo = {
         modal.show();
     },
 
-    async createCustomSegment() {
-        const name = document.getElementById('customSegmentName').value.trim();
-        const description = document.getElementById('customSegmentDescription').value.trim();
-        const fields = document.getElementById('customSegmentFields').value.trim();
-        if (!name || !description || !fields) {
-            ui.showError("Please fill in all fields to create your custom segment.");
-            return;
-        }
-        try {
-            const customKey = 'custom_segment';
-            state.segmentData = {
-                [customKey]: {
-                    name: name,
-                    description: description,
-                    fields: fields
-                }
-            };
-            state.segmentIcons = {
-                [customKey]: "data:image/svg+xml;base64," + btoa(`
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-                        <circle cx="50" cy="50" r="45" fill="#198754"/>
-                        <text x="50" y="60" font-family="Arial" font-size="40" fill="white" text-anchor="middle">+</text>
-                    </svg>
-                `)
-            };
-            this.resetAppState();
-            segments.displaySegmentCards();
-            setTimeout(() => {
-                const customSegmentCard = document.querySelector(`[data-segment-key="${customKey}"]`);
-                if (customSegmentCard) {
-                    customSegmentCard.click();
-                }
-            }, 100);
-            const modal = bootstrap.Modal.getInstance(document.getElementById('createCustomSegmentModal'));
-            modal.hide();
-            document.querySelectorAll('.demo-card').forEach(card => card.classList.remove('selected'));
-            document.getElementById('personaGenerationSection').scrollIntoView({ 
-                behavior: 'smooth', 
-                block: 'start' 
-            });
-
-        } catch (error) {
-            console.error('Error creating custom segment:', error);
-            ui.showError(`Error creating custom segment: ${error.message}`);
-        }
-    },
-
     resetAppState() {
         state.personas = [];
         state.surveyResults = [];
@@ -1006,12 +959,7 @@ const demo = {
                 [customKey]: {  name: name, description: description,  fields: fields  }
             };
             state.segmentIcons = {
-                [customKey]: "data:image/svg+xml;base64," + btoa(`
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-                        <circle cx="50" cy="50" r="45" fill="#198754"/>
-                        <text x="50" y="60" font-family="Arial" font-size="40" fill="white" text-anchor="middle">+</text>
-                    </svg>
-                `)
+            [customKey]: "data:image/svg+xml;base64," + btoa(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="#0d6efd"/><rect x="25" y="35" width="50" height="45" fill="white" rx="2"/><rect x="30" y="42" width="8" height="8" fill="#0d6efd"/><rect x="46" y="42" width="8" height="8" fill="#0d6efd"/><rect x="62" y="42" width="8" height="8" fill="#0d6efd"/><rect x="30" y="55" width="8" height="8" fill="#0d6efd"/><rect x="46" y="55" width="8" height="8" fill="#0d6efd"/><rect x="62" y="55" width="8" height="8" fill="#0d6efd"/><rect x="44" y="68" width="12" height="12" fill="#0d6efd"/></svg>`)
             };
             this.resetAppState();
             segments.displaySegmentCards();
