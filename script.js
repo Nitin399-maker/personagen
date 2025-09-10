@@ -391,6 +391,23 @@ const personas = {
             if (!Array.isArray(state.personas) || !state.personas.length) { throw new Error("Code execution did not return an array of personas"); }
             ui.updateProgress(progressBar, 100, `${state.personas.length} personas generated`);
             this.displayPersonas();
+            if (state.pendingQuestions && state.pendingOptions) {
+                state.surveyQuestions = state.pendingQuestions;
+                state.surveyOptions = state.pendingOptions;
+                state.pendingQuestions = null;
+                state.pendingOptions = null;
+                results.generateColorScales();
+                survey.renderDynamicQuestions();
+                state.surveyQuestions.forEach((_, index) => {
+                    const questionKey = `question_${index + 1}`;
+                    const options = state.surveyOptions[index] || [];
+                    if (!state.colorScales[questionKey]) {
+                        state.colorScales[questionKey] = d3.scaleOrdinal()
+                            .domain(options)
+                            .range(CONSTANTS.CHART_COLORS.slice(0, options.length));
+                    }
+                });
+            }
             document.getElementById('downloadPersonasBtn').disabled = false;
             ui.showSection('personasSection');
             elements.surveySection.style.display = 'block';
@@ -429,14 +446,12 @@ const personas = {
 };
 
 const survey = {
-    // NEW: Render dynamic questions UI
     renderDynamicQuestions() {
         elements.dynamicQuestionsContainer.innerHTML = '';
         if (state.surveyQuestions.length === 0) {
             elements.dynamicQuestionsContainer.innerHTML = `<p class="text-muted small p-3 text-center">No survey questions added yet. Click "Add Question" to start.</p>`;
             return;
         }
-
         const fragment = document.createDocumentFragment();
         state.surveyQuestions.forEach((question, index) => {
             const options = state.surveyOptions[index] || [];
@@ -904,45 +919,66 @@ const demo = {
         demosContainer.insertBefore(customCard, demosContainer.firstChild);
     },
 
-    openCustomSegmentModal() {
-        const modal = new bootstrap.Modal(document.getElementById('createCustomSegmentModal'));
-        document.getElementById('createCustomSegmentForm').reset();
-        modal.show();
+    async generateSegmentFromPrompt(prompt) {
+        try {
+            const model = elements.personaModelSelect.value;
+            const systemPrompt = `You are a market research expert. Create a segment profile and questions in JSON with these fields:  
+- name: a concise segment name (3-5 words)  
+- description: Exactly 8 characteristics listed one per line without bullets, numbers, or dashes  
+- fields: a list of 8 to 12 relevant data fields to collect  
+- questions: exactly 5 relevant survey questions in an array and question must be one line each
+- options: an array of 5 sub-arrays, each containing exactly 4 answer options corresponding to each question  and these option must not be more than 3 words each
+Output must strictly follow this structure.`;
+
+            const content = await api.makeAPICall([
+                { role: "system", content: systemPrompt },
+                { role: "user", content: `Create a detailed segment profile and survey questions for this description: ${prompt}. Remember to format the description with exactly 5 characteristics, one per line, and generate exactly 5 questions with 4 options each.` }
+            ], model, 0.7, { type: "json_object" });
+            let segmentData;
+            try {
+                segmentData = JSON.parse(content);
+            } catch (e) {
+                const jsonMatch = content.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                    segmentData = JSON.parse(jsonMatch[0]);
+                } else {
+                    throw new Error("Could not parse LLM response");
+                }
+            }
+            if (typeof segmentData.description === 'string') {
+                segmentData.description = segmentData.description
+                    .split(/[.,]\s*|\n/).map(line => line.trim()).filter(line => line.length > 0)
+                    .join('\n');
+            }
+            if (segmentData.questions && segmentData.options && 
+                Array.isArray(segmentData.questions) && Array.isArray(segmentData.options)) {
+                state.pendingQuestions = segmentData.questions.slice(0, 5);
+                state.pendingOptions = segmentData.options.slice(0, 5).map(options => options.slice(0, 4));
+                state.pendingQuestions.forEach((_, index) => {
+                    const questionKey = `question_${index + 1}`;
+                    const options = state.pendingOptions[index] || [];
+                    state.colorScales[questionKey] = d3.scaleOrdinal()
+                        .domain(options)
+                        .range(CONSTANTS.CHART_COLORS.slice(0, options.length));
+                });
+            }
+            document.getElementById('customSegmentName').value = segmentData.name;
+            document.getElementById('customSegmentDescription').value = segmentData.description;
+            document.getElementById('customSegmentFields').value = Array.isArray(segmentData.fields) ? segmentData.fields.join('\n') : segmentData.fields;
+            const promptModal = bootstrap.Modal.getInstance(document.getElementById('segmentPromptModal'));
+            promptModal.hide();
+            const customModal = new bootstrap.Modal(document.getElementById('createCustomSegmentModal'));
+            customModal.show();
+        } catch (error) {
+            ui.showError(`Error generating segment details: ${error.message}`);
+            console.error('Error generating segment:', error);
+        }
     },
 
-    resetAppState() {
-        state.personas = [];
-        state.surveyResults = [];
-        state.surveyQuestions = [];
-        state.surveyOptions = [];
-        state.charts.forEach(chart => chart.destroy());
-        state.charts = [];
-        state.generatedCode = '';
-        state.currentSegmentKey = "";
-        state.colorScales = {};
-        state.segmentPrompt = "";
-        state.fieldsList = "";
-        elements.personaCount.textContent = '0';
-        elements.responseCount.textContent = '0';
-        elements.generatedCode.textContent = '// Code will appear here...';
-        elements.personaTableBody.innerHTML = '<tr><td>No personas generated yet</td></tr>';
-        elements.surveyResultsMatrix.innerHTML = '<p class="text-muted small"><i class="bi bi-info-circle me-1"></i>Survey responses will appear here as a matrix...</p>';
-        elements.chartsContainer.innerHTML = '<p class="text-muted small"><i class="bi bi-info-circle me-1"></i>Charts will appear here.</p>';
-        elements.dynamicQuestionsContainer.innerHTML = '<p class="text-muted small p-3 text-center">No survey questions added yet. Click "Add Question" to start.</p>';
-        ['generatedCodeSection', 'personasSection', 'surveySectionWrapper', 'resultsSectionWrapper'].forEach(sectionId => {
-            const section = document.getElementById(sectionId);
-            if (section) section.style.display = 'none';
-        });
-        ['executeCodeBtn', 'downloadPersonasBtn', 'runSurveyBtn', 'downloadSurveyCsvBtn', 'downloadResultsBtn'].forEach(btnId => {
-            const btn = document.getElementById(btnId);
-            if (btn) btn.disabled = true;
-        });
-    },
-
     openCustomSegmentModal() {
-        const modal = new bootstrap.Modal(document.getElementById('createCustomSegmentModal'));
-        document.getElementById('createCustomSegmentForm').reset();
-        modal.show();
+        const promptModal = new bootstrap.Modal(document.getElementById('segmentPromptModal'));
+        document.getElementById('segmentPromptForm').reset();
+        promptModal.show();
     },
 
     async createCustomSegment() {
@@ -1139,7 +1175,7 @@ const handlers = {
         });
     },
     setupDynamicHandlers() {
-    document.addEventListener('click', function(e) {
+    document.addEventListener('click', async function(e) {
         const card = e.target.closest('.demo-card');
         if (card) {
             if (card.dataset.custom === 'true') {
@@ -1148,6 +1184,26 @@ const handlers = {
             }
             const demoFile = card.getAttribute('data-file');
             if (demoFile) demo.loadDemoData(demoFile);
+        }
+        if (e.target.id === 'generateSegmentBtn') {
+            const button = e.target;
+            const promptText = document.getElementById('segmentPromptText').value.trim();
+            if (promptText) {
+                const originalContent = button.innerHTML;
+                button.disabled = true;
+                button.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Generating...';
+                const contentDiv = document.getElementById('generatedContent');
+                if (contentDiv) contentDiv.style.display = 'none';
+                try {
+                    await demo.generateSegmentFromPrompt(promptText);
+                    if (contentDiv) contentDiv.style.display = 'block';
+                } finally {
+                    button.innerHTML = originalContent;
+                    button.disabled = false;
+                }
+            } else {
+                ui.showError("Please enter a description of your segment");
+            }
         }
     });
         elements.dynamicQuestionsContainer.addEventListener('click', e => {

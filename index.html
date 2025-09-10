@@ -33,7 +33,7 @@
         .segment-box { cursor: pointer; transition: all 0.2s ease; height: 100%; border: 2px solid transparent; }
         .segment-box:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
         .segment-box.selected { border-color: #0d6efd; background-color: rgba(13, 110, 253, 0.05); }
-        .segment-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+       .segment-icon { width: 120px; height: 120px; object-fit: contain; vertical-align: middle; font-size: 2rem; margin-bottom: 0.5rem; border: none; outline: none; box-shadow: none; }
         .demo-card { transition: all 0.2s ease; border: 2px solid transparent; }
         .demo-card:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
         .demo-card.selected { border-color: #0d6efd; background-color: rgba(13, 110, 253, 0.05); }
@@ -387,6 +387,29 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Cancel</button>
                     <button type="button" class="btn btn-primary" id="createCustomSegmentBtn">Create Segment</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- NEW: Modal for segment prompt -->
+    <div class="modal fade" id="segmentPromptModal" tabindex="-1" aria-labelledby="segmentPromptModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="segmentPromptModalLabel">Describe Your Segment</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="segmentPromptForm">
+                        <div class="mb-3">
+                            <label for="segmentPromptText" class="form-label">Describe your target segment in detail</label>
+                            <textarea class="form-control" id="segmentPromptText" rows="6" placeholder="Describe the type of audience/segment you want to create. For example: Young tech professionals living in urban areas who are early adopters of new technology and prioritize convenience in their daily lives..."></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="generateSegmentBtn">Generate Segment Details</button>
                 </div>
             </div>
         </div>
